@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Flowork OS — Sovereign FXCalc Binary Dispatcher
+# Route CLI calls or toggle right Cyber Wing module
+
+if [ "$#" -gt 0 ]; then
+    exec /usr/bin/python3 /opt/floworkos/engine/fxcalc/fxcalc.py "$@"
+else
+    # Default without args: open or toggle right Cyber Wing with FXCalc
+    exec /usr/bin/python3 /opt/floworkos/engine/orbital_reactor/cyber_wing.py toggle right fxcalc
+fi

@@ -912,6 +912,12 @@
       "file": "triggers/orbital_cyber_wings_geometry.md",
       "rule": "Triggered when modifying, debugging, or styling Flowork OS Orbital Cyber Wings, cockpit flanks, or single-slot reactor extensions.",
       "condition": "hasKeywords([\"cyber_wing\", \"orbital_reactor\", \"cockpit_wings\", \"reactor_hud\", \"wing_geometry\", \"single_slot_swap\"]) || promptContains([\"sayap\", \"sayap kokpit\", \"cyber wing\", \"orbital wing\", \"power control wing\"])"
+    },
+    {
+      "id": "fxcalc_sovereign_engine",
+      "file": "triggers/fxcalc_sovereign_engine.md",
+      "rule": "Triggered when working with Forex position sizing, risk calculations, fxcalc engine, or Right Cyber Wing financial modules.",
+      "condition": "hasKeywords([\"fxcalc\", \"forex\", \"position_size\", \"risk_management\", \"stop_loss\", \"leverage\", \"pip_value\", \"cyber_wing\"]) || promptContains([\"fxcalc\", \"forex\", \"posisi\", \"risk\", \"lot\", \"pips\", \"margin\"])"
     }
   ]
 }

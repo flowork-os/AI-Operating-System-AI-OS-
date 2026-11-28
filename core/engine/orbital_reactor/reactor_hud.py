@@ -284,7 +284,7 @@ class UnifiedReactorHudWindow(Gtk.Window):
                 }
 
         # App catalogs & trending feeds for 6-sector Irisan Menu
-        self.koding_apps = []
+        self.fxcalc_apps = []
         self.internet_apps = []
         self.media_apps = []
         self.sistem_apps = []
@@ -369,7 +369,8 @@ class UnifiedReactorHudWindow(Gtk.Window):
         self.queue_draw()
 
     def _load_app_catalogs(self):
-        self.koding_apps = [
+        self.fxcalc_apps = [
+            {"name": "FX Position Calculator", "cmd": "/opt/floworkos/bin/flowork-fxcalc", "meta": "Forex Risk & Lot Size Engine", "badge": "CALC"},
             {"name": "Visual Studio Code", "cmd": "/usr/share/code/code", "meta": "Code Editor & Workspace", "badge": "CODE"},
             {"name": "Alacritty Terminal", "cmd": "alacritty", "meta": "GPU Accelerated Terminal", "badge": "SHELL"},
         ]
@@ -786,7 +787,7 @@ class UnifiedReactorHudWindow(Gtk.Window):
                     if deg < 0:
                         deg += 360.0
                     if 302 <= deg <= 358:
-                        self.hovered_sector = "koding"
+                        self.hovered_sector = "fxcalc"
                     elif 2 <= deg <= 58:
                         self.hovered_sector = "internet"
                     elif 62 <= deg <= 118:
@@ -1067,6 +1068,17 @@ class UnifiedReactorHudWindow(Gtk.Window):
                 # Direct launch Shutdown Timer — no submenu bloom
                 try:
                     subprocess.Popen(["/opt/floworkos/bin/flowork-shutdown-timer"], start_new_session=True)
+                except Exception:
+                    pass
+                self.active_sector = None
+                self.target_progress = 0.0
+                self._update_input_shape()
+                self.queue_draw()
+                return True
+            if self.hovered_sector == "fxcalc":
+                # Direct launch FXCalc via Right Cyber Wing
+                try:
+                    subprocess.Popen(["/opt/floworkos/bin/flowork-fxcalc"], start_new_session=True)
                 except Exception:
                     pass
                 self.active_sector = None
@@ -2392,7 +2404,7 @@ class UnifiedReactorHudWindow(Gtk.Window):
         r_out = self.r_out
 
         sectors = [
-            ("koding", 302, 358, 330, C_GREEN, "CODE", "IDE, AI & Terminal", self.koding_apps, True, "right", -140, -10),
+            ("fxcalc", 302, 358, 330, C_GREEN, "FXCALC", "Forex Position Calc", self.fxcalc_apps, True, "right", -140, -10),
             ("internet", 2, 58, 30, C_CYAN, "WEB", "Browser & Network", self.internet_apps, True, "right", -40, 10),
             ("media", 62, 118, 90, C_AMBER, "MEDIA", "3D, Audio & Video", self.media_apps, True, "right", 60, -10),
             ("shutdown", 122, 178, 150, C_RED, "TIMER", "Shutdown Timer", self.sistem_apps, True, "left", 60, 10),

@@ -1,15 +1,15 @@
 {
   "format_version": "1.1",
-  "generated_at": "2026-11-28T15:41:56Z",
+  "generated_at": "2026-11-28T16:01:36Z",
   "version": "1.0.0",
-  "manifest_id": "48f174bab4d8f6c3e40006164a89248d5a186f76e4b8f9fe7750adafdacf0418",
-  "commit": "32645802a0869c375441b6578850e39d9ff43b72",
+  "manifest_id": "b0abda4d721c4bdb43576790c18f329fc72c237eea6146e85241b9a03798ccc0",
+  "commit": "bfc81eb58f8552829914c6904b724dda3cf14a54",
   "branch": "main",
   "repository": "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git",
   "raw_base_url": "https://raw.githubusercontent.com/flowork-os/AI-Operating-System-AI-OS-/main",
-  "total_files": 23917,
+  "total_files": 23920,
   "total_symlinks": 207,
-  "total_bytes": 790553508,
+  "total_bytes": 790599901,
   "files": {
     "core/ARCHITECT.md": {
       "sha256": "f4807c67526e378d33e3d99169c1873d9013770102c4b9da28d89cfb9ff1fe68",
@@ -125922,7 +125922,7 @@
       "target": "/opt/floworkos/system/environment"
     },
     "core/system/version.json": {
-      "sha256": "6ec7a9f5b9e034f7cecf2c0c1a9f92abfdb1a29079bb58015675d0c78ed75fb2",
+      "sha256": "5cfb2d693dd881a6c457192ce1136536204542bd202ade93d9c11f8acb8a831c",
       "size": 452,
       "mode": "664",
       "target": "/opt/floworkos/system/version.json"
@@ -127290,8 +127290,8 @@
       "target": "/opt/floworkos/system/system_promp/promps/02_operational_guidelines.md"
     },
     "core/system/system_promp/promps/triggers.json": {
-      "sha256": "d9c0f7a5dd80362c1488ec576ae6849913c7d912a77ca29ee8dd33e503e737f2",
-      "size": 77495,
+      "sha256": "135ce0551aa99d057e7fe9f6672f457db64cb79ea6a72ad66a2cd8c4b2cf8951",
+      "size": 77995,
       "mode": "664",
       "target": "/opt/floworkos/system/system_promp/promps/triggers.json"
     },
@@ -129293,6 +129293,12 @@
       "mode": "644",
       "target": "/opt/floworkos/system/system_promp/promps/triggers/top_panel_tasklist_architecture.md"
     },
+    "core/system/system_promp/promps/triggers/fxcalc_sovereign_engine.md": {
+      "sha256": "a712dd1d0c641b01e3b697730c959388bac33eb4cef319c629600488bf7ec875",
+      "size": 1498,
+      "mode": "644",
+      "target": "/opt/floworkos/system/system_promp/promps/triggers/fxcalc_sovereign_engine.md"
+    },
     "core/system/system_promp/promps/triggers/task_execution_lifecycle.md": {
       "sha256": "004304184c9273dadfa6f65dc2f412c43cd09c71ba5a9ad7864b8cb0140fb599",
       "size": 1376,
@@ -129664,6 +129670,12 @@
       "size": 295,
       "mode": "775",
       "target": "/opt/floworkos/bin/flowork-auto-lyric"
+    },
+    "core/bin/flowork-fxcalc": {
+      "sha256": "b30fa0c89a835ee7998eef46b035a4d2ad0a8b01f503e62b7586391bb866d84e",
+      "size": 397,
+      "mode": "755",
+      "target": "/opt/floworkos/bin/flowork-fxcalc"
     },
     "core/bin/flowork-suno-cover": {
       "sha256": "3638c36141b2aae2b298a042ecb56ac488634ac3dfbfaf9cd45e079ff8147c92",
@@ -139799,6 +139811,12 @@
       "mode": "644",
       "target": "/opt/floworkos/share/scrcpy/scrcpy-server"
     },
+    "core/engine/fxcalc/fxcalc.py": {
+      "sha256": "c1a622c848a82e3f0e4f94e66e3f8658d938ca755f7719d569ff11ea6f9de294",
+      "size": 24938,
+      "mode": "755",
+      "target": "/opt/floworkos/engine/fxcalc/fxcalc.py"
+    },
     "core/engine/chrono_sentinel/chrono_sentinel_hud.py": {
       "sha256": "82ee0d0f429a95f7b06fd4fc6476396da57404f6e5bef0a42df77a24c73b79a8",
       "size": 16830,
@@ -139914,14 +139932,14 @@
       "target": "/opt/floworkos/engine/orbital_reactor/financial_orbit.py"
     },
     "core/engine/orbital_reactor/reactor_hud.py": {
-      "sha256": "6a484bc90cab23e210da2e60fd4d9d0f949f6f9cd3928abc7340458a2012547e",
-      "size": 129006,
+      "sha256": "36eb05551e415948b136cee1c54d4fdcf1ac94adba9eff02e861ebe8307f925f",
+      "size": 129636,
       "mode": "755",
       "target": "/opt/floworkos/engine/orbital_reactor/reactor_hud.py"
     },
     "core/engine/orbital_reactor/cyber_wing.py": {
-      "sha256": "569df58059ce161a739ace0a318ba741ccca10aaa1b88fa864b15e73d2963402",
-      "size": 52803,
+      "sha256": "4a2da236b69bbb337d091154173bf38501e105ca9ee93d83030764bdef7295d1",
+      "size": 71233,
       "mode": "755",
       "target": "/opt/floworkos/engine/orbital_reactor/cyber_wing.py"
     },

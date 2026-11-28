@@ -24,6 +24,13 @@ import json
 import socket
 from datetime import datetime
 
+# ── FXCalc Core Mathematical Engine ──
+try:
+    from fxcalc.fxcalc import calculate_position as fx_calculate_position, SUPPORTED_PAIRS as FX_PAIRS
+except ImportError:
+    sys.path.insert(0, "/opt/floworkos/engine")
+    from fxcalc.fxcalc import calculate_position as fx_calculate_position, SUPPORTED_PAIRS as FX_PAIRS
+
 # ── Dynamic Runtime Paths ──
 RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
 SOCK_PATH = os.path.join(RUNTIME_DIR, "flowork_cyber_wing.sock")
@@ -178,6 +185,17 @@ class CyberWingWindow(Gtk.Window):
         self.timer_target = 0.0
         self.timer_active_total = 0
         self.timer_source_id = None
+
+        # FXCalc App State
+        self.fx_pair_idx = 0
+        self.fx_margin = 10000.0
+        self.fx_leverage = 500.0
+        self.fx_risk_pct = 1.0
+        self.fx_is_risk_pct = True
+        self.fx_stop_loss_pips = 20.0
+        self.fx_hitboxes = []
+        self.hovered_fx = None
+        self._fx_well_hitbox = None
 
         # Hover & Hitbox Registry
         self.hover_x = -1
@@ -439,7 +457,12 @@ class CyberWingWindow(Gtk.Window):
 
         # Specular Rim Gradient on Edge
         lin = cairo.LinearGradient(0, 0, 0, h)
-        act_col = ACTIONS[self.timer_action]["color"] if self.active_app == "timer" else C_CYAN
+        if self.active_app == "timer":
+            act_col = ACTIONS[self.timer_action]["color"]
+        elif self.active_app == "fxcalc":
+            act_col = C_GREEN
+        else:
+            act_col = C_CYAN
         lin.add_color_stop_rgba(0.00, 1.0, 1.0, 1.0, 0.50 * p)
         lin.add_color_stop_rgba(0.15, act_col[0], act_col[1], act_col[2], 0.40 * p)
         lin.add_color_stop_rgba(0.85, act_col[0], act_col[1], act_col[2], 0.15 * p)
@@ -460,6 +483,8 @@ class CyberWingWindow(Gtk.Window):
         # ── 4. Render Active App Content inside Wing ──
         if self.active_app == "timer":
             self._draw_timer_content(cr, layout, w, h, p)
+        elif self.active_app == "fxcalc":
+            self._draw_fxcalc_content(cr, layout, w, h, p)
         else:
             self._draw_placeholder_content(cr, layout, w, h, p)
 
@@ -601,7 +626,16 @@ class CyberWingWindow(Gtk.Window):
 
         # Title indicator pill
         cr.new_path()
-        act_col = ACTIONS[self.timer_action]["color"] if self.active_app == "timer" else C_CYAN
+        if self.active_app == "timer":
+            act_col = ACTIONS[self.timer_action]["color"]
+            app_title = "POWER CONTROL"
+        elif self.active_app == "fxcalc":
+            act_col = C_GREEN
+            app_title = "FX POSITION & RISK"
+        else:
+            act_col = C_CYAN
+            app_title = (self.active_app or "HUD WING").upper()
+
         dot_x, dot_y, dot_r = cx + 8, 28, 4.5
         cr.arc(dot_x, dot_y, dot_r, 0, 2 * math.pi)
         cr.set_source_rgba(act_col[0], act_col[1], act_col[2], 0.95 * p)
@@ -612,8 +646,7 @@ class CyberWingWindow(Gtk.Window):
         cr.set_source_rgba(act_col[0], act_col[1], act_col[2], 0.25 * p)
         cr.fill()
 
-        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 10.5"))
-        app_title = "POWER CONTROL" if self.active_app == "timer" else (self.active_app or "HUD WING").upper()
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 8.8"))
         layout.set_text(f"{self.side.upper()} WING // {app_title}", -1)
         tw, th = layout.get_pixel_size()
 
@@ -1074,6 +1107,363 @@ class CyberWingWindow(Gtk.Window):
         cr.move_to(cx + (cw - tw) / 2, 200)
         PangoCairo.show_layout(cr, layout)
 
+    def _draw_fxcalc_content(self, cr, layout, w, h, p):
+        cx = getattr(self, "content_x", 24.0)
+        cw = getattr(self, "content_w", w - 48.0)
+        self.fx_hitboxes = []
+
+        cur_pair = FX_PAIRS[self.fx_pair_idx]
+        res = fx_calculate_position(
+            margin=self.fx_margin,
+            leverage=self.fx_leverage,
+            risk_value=self.fx_risk_pct,
+            is_risk_pct=self.fx_is_risk_pct,
+            stop_loss_pips=self.fx_stop_loss_pips,
+            pair_name=cur_pair["name"],
+        )
+
+        # ── Row 1: Pair Selection ──
+        pair_label_y = 66
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.5"))
+        layout.set_text("TRADING PAIR", -1)
+        cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.75 * p)
+        cr.move_to(cx + 2, pair_label_y)
+        PangoCairo.show_layout(cr, layout)
+
+        p_y = 80
+        p_h = 28
+        top_pairs = FX_PAIRS[:4]
+        p_gap = 5
+        p_w = (cw - (len(top_pairs) - 1) * p_gap) / len(top_pairs)
+
+        for i, pair_item in enumerate(top_pairs):
+            bx = cx + i * (p_w + p_gap)
+            is_sel = (i == self.fx_pair_idx)
+            is_hov = (self.hovered_fx == f"fx_pair:{i}")
+
+            cr.new_path()
+            self._rounded_rect(cr, bx, p_y, p_w, p_h, 6)
+            if is_sel:
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.28 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.95 * p)
+                cr.set_line_width(1.4)
+                cr.stroke()
+            elif is_hov:
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.12 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.50 * p)
+                cr.set_line_width(1.0)
+                cr.stroke()
+            else:
+                cr.set_source_rgba(C_SURFACE[0], C_SURFACE[1], C_SURFACE[2], 0.60 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_BORDER_BASE[0], C_BORDER_BASE[1], C_BORDER_BASE[2], 0.35 * p)
+                cr.set_line_width(0.8)
+                cr.stroke()
+
+            layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.8"))
+            layout.set_text(pair_item["name"], -1)
+            tw, th = layout.get_pixel_size()
+            cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 1.0 * p if is_sel else 0.70 * p)
+            cr.move_to(bx + (p_w - tw) / 2, p_y + (p_h - th) / 2)
+            PangoCairo.show_layout(cr, layout)
+            self.fx_hitboxes.append((f"fx_pair:{i}", bx, p_y, p_w, p_h))
+
+        # ── Row 2: Parameters (Margin & Leverage) ──
+        pbox_y = 116
+        pbox_h = 62
+        pbox_gap = 6
+        pbox_w = (cw - pbox_gap) / 2
+
+        # Margin Box
+        self._draw_fx_param_box(
+            cr, layout, cx, pbox_y, pbox_w, pbox_h,
+            "MARGIN", f"${self.fx_margin:,.0f}",
+            [("-$1k", -1000, "fx_margin:-1000"), ("+$1k", 1000, "fx_margin:1000"), ("+$5k", 5000, "fx_margin:5000")],
+            p
+        )
+
+        # Leverage Box
+        self._draw_fx_param_box(
+            cr, layout, cx + pbox_w + pbox_gap, pbox_y, pbox_w, pbox_h,
+            "LEVERAGE", f"1:{int(self.fx_leverage)}",
+            [("1:100", 100, "fx_lev:100"), ("1:500", 500, "fx_lev:500"), ("1:1k", 1000, "fx_lev:1000")],
+            p
+        )
+
+        # ── Row 3: Risk % Pills ──
+        risk_y = 186
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.5"))
+        layout.set_text(f"RISK EXPOSURE ({self.fx_risk_pct:.1f}% = ${res['risk_amount']:,.2f})", -1)
+        cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.75 * p)
+        cr.move_to(cx + 2, risk_y)
+        PangoCairo.show_layout(cr, layout)
+
+        rpill_y = 200
+        rpill_h = 24
+        rpills = [0.5, 1.0, 2.0, 3.0, 5.0]
+        rpill_gap = 4
+        rpill_w = (cw - (len(rpills) - 1) * rpill_gap) / len(rpills)
+
+        for i, rval in enumerate(rpills):
+            bx = cx + i * (rpill_w + rpill_gap)
+            is_sel = abs(self.fx_risk_pct - rval) < 0.01
+            is_hov = (self.hovered_fx == f"fx_risk:{rval}")
+
+            cr.new_path()
+            self._rounded_rect(cr, bx, rpill_y, rpill_w, rpill_h, 5)
+            if is_sel:
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.28 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.95 * p)
+                cr.set_line_width(1.2)
+                cr.stroke()
+            elif is_hov:
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.12 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.50 * p)
+                cr.set_line_width(0.9)
+                cr.stroke()
+            else:
+                cr.set_source_rgba(C_SURFACE[0], C_SURFACE[1], C_SURFACE[2], 0.50 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_BORDER_BASE[0], C_BORDER_BASE[1], C_BORDER_BASE[2], 0.25 * p)
+                cr.set_line_width(0.7)
+                cr.stroke()
+
+            layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.5"))
+            layout.set_text(f"{rval:.1f}%", -1)
+            tw, th = layout.get_pixel_size()
+            cr.set_source_rgba(C_CYAN[0] if is_sel else C_TEXT_WHITE[0], C_CYAN[1] if is_sel else C_TEXT_WHITE[1], C_CYAN[2] if is_sel else C_TEXT_WHITE[2], 1.0 * p if is_sel else 0.70 * p)
+            cr.move_to(bx + (rpill_w - tw) / 2, rpill_y + (rpill_h - th) / 2)
+            PangoCairo.show_layout(cr, layout)
+            self.fx_hitboxes.append((f"fx_risk:{rval}", bx, rpill_y, rpill_w, rpill_h))
+
+        # ── Row 4: Recessed Digital Well (Lot Size & SL) ──
+        well_y = 232
+        well_h = 136
+        self._fx_well_hitbox = (cx, well_y, cw, well_h)
+
+        cr.new_path()
+        self._rounded_rect(cr, cx, well_y, cw, well_h, 12)
+        cr.set_source_rgba(C_WELL[0], C_WELL[1], C_WELL[2], 0.88 * p)
+        cr.fill_preserve()
+        cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.35 * p)
+        cr.set_line_width(1.2)
+        cr.stroke()
+
+        # Well Header
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.5"))
+        layout.set_text("CALCULATED POSITION SIZE", -1)
+        cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.90 * p)
+        cr.move_to(cx + 12, well_y + 10)
+        PangoCairo.show_layout(cr, layout)
+
+        # SL Step Adjustment Buttons inside Well
+        sbtn_w = 34
+        sbtn_h = 24
+        s_y1 = well_y + 36
+        s_y2 = well_y + 68
+
+        left_sl = [
+            ("-5p", -5, cx + 8, s_y1, "fx_sl:-5"),
+            ("-1p", -1, cx + 8, s_y2, "fx_sl:-1"),
+        ]
+        right_sl = [
+            ("+1p", 1, cx + cw - 8 - sbtn_w, s_y1, "fx_sl:1"),
+            ("+5p", 5, cx + cw - 8 - sbtn_w, s_y2, "fx_sl:5"),
+        ]
+
+        for lbl, _d, sx, sy, hid in left_sl + right_sl:
+            self._draw_fx_step_btn(cr, layout, lbl, sx, sy, sbtn_w, sbtn_h, hid, p)
+
+        # Center Big Lot Display
+        lots_str = f"{res['lots']:.2f} LOTS"
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 24"))
+        layout.set_text(lots_str, -1)
+        tw, th = layout.get_pixel_size()
+
+        clock_cx = cx + cw / 2
+
+        # Ambient Glow
+        cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.25 * p)
+        cr.move_to(clock_cx - tw / 2, well_y + 44 - th / 2 + 1)
+        PangoCairo.show_layout(cr, layout)
+
+        cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 0.98 * p)
+        cr.move_to(clock_cx - tw / 2, well_y + 44 - th / 2)
+        PangoCairo.show_layout(cr, layout)
+
+        # Subtext Units & SL
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 8.5"))
+        sub_str = f"{res['units']:,} UNITS  •  {self.fx_stop_loss_pips:.0f} PIPS SL"
+        layout.set_text(sub_str, -1)
+        uw, _ = layout.get_pixel_size()
+        cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.85 * p)
+        cr.move_to(clock_cx - uw / 2, well_y + 74)
+        PangoCairo.show_layout(cr, layout)
+
+        # Scroll hint
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono 7"))
+        layout.set_text("▲ SCROLL MOUSE WHEEL TO ADJUST SL ▲", -1)
+        hw, _ = layout.get_pixel_size()
+        cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.55 * p)
+        cr.move_to(clock_cx - hw / 2, well_y + well_h - 18)
+        PangoCairo.show_layout(cr, layout)
+
+        # ── Row 5: Telemetry Pill (Pip Value & Margin) ──
+        tel_y = 376
+        tel_h = 42
+        cr.new_path()
+        self._rounded_rect(cr, cx, tel_y, cw, tel_h, 8)
+        cr.set_source_rgba(C_SURFACE[0], C_SURFACE[1], C_SURFACE[2], 0.55 * p)
+        cr.fill_preserve()
+        cr.set_source_rgba(C_BORDER_BASE[0], C_BORDER_BASE[1], C_BORDER_BASE[2], 0.30 * p)
+        cr.set_line_width(0.8)
+        cr.stroke()
+
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.5"))
+        pv_text = f"PIP: ${res['pip_value_home']:.2f}  |  REQ MARGIN: ${res['margin_required']:.2f} ({res['margin_utilization']:.1f}%)"
+        layout.set_text(pv_text, -1)
+        pw, _ = layout.get_pixel_size()
+        cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 0.90 * p)
+        cr.move_to(cx + (cw - pw) / 2, tel_y + 8)
+        PangoCairo.show_layout(cr, layout)
+
+        # Utilization bar inside telemetry pill
+        bar_w = cw - 24
+        bar_h = 4
+        bx = cx + 12
+        by = tel_y + tel_h - 10
+        cr.new_path()
+        self._rounded_rect(cr, bx, by, bar_w, bar_h, 2)
+        cr.set_source_rgba(0.1, 0.15, 0.22, 0.8 * p)
+        cr.fill()
+
+        util_frac = min(1.0, max(0.0, res["margin_utilization"] / 100.0))
+        if util_frac > 0:
+            fill_col = C_RED if util_frac > 0.8 else (C_AMBER if util_frac > 0.5 else C_GREEN)
+            cr.new_path()
+            self._rounded_rect(cr, bx, by, bar_w * util_frac, bar_h, 2)
+            cr.set_source_rgba(fill_col[0], fill_col[1], fill_col[2], 0.95 * p)
+            cr.fill()
+
+        # ── Row 6: Bottom Telemetry Grid ──
+        grid_y = 426
+        grid_h = 46
+        grid_gap = 6
+        grid_w = (cw - grid_gap) / 2
+
+        self._draw_fx_metric_pill(cr, layout, cx, grid_y, grid_w, grid_h, "MAX ALLOWABLE", f"{res['max_lots']:.2f} Lots", p)
+        self._draw_fx_metric_pill(cr, layout, cx + grid_w + grid_gap, grid_y, grid_w, grid_h, "WCMA CASH", f"${res['wcma']:,.0f}", p)
+
+        # Footer
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono 7"))
+        layout.set_text("FLOWORK OS SOVEREIGN ENGINE • RIGHT WING FXCALC", -1)
+        tw, _ = layout.get_pixel_size()
+        cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.40 * p)
+        cr.move_to(clock_cx - tw / 2, h - 22)
+        PangoCairo.show_layout(cr, layout)
+
+    def _draw_fx_param_box(self, cr, layout, x, y, w, h, title, val_str, buttons, p):
+        cr.new_path()
+        self._rounded_rect(cr, x, y, w, h, 8)
+        cr.set_source_rgba(C_SURFACE[0], C_SURFACE[1], C_SURFACE[2], 0.60 * p)
+        cr.fill_preserve()
+        cr.set_source_rgba(C_BORDER_BASE[0], C_BORDER_BASE[1], C_BORDER_BASE[2], 0.35 * p)
+        cr.set_line_width(0.8)
+        cr.stroke()
+
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 7.0"))
+        layout.set_text(title, -1)
+        cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.70 * p)
+        cr.move_to(x + 8, y + 6)
+        PangoCairo.show_layout(cr, layout)
+
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 10"))
+        layout.set_text(val_str, -1)
+        cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 0.95 * p)
+        cr.move_to(x + 8, y + 19)
+        PangoCairo.show_layout(cr, layout)
+
+        # Mini Buttons
+        bw = (w - 16 - (len(buttons) - 1) * 3) / len(buttons)
+        bh = 17
+        by = y + h - bh - 6
+        for i, (blbl, _val, hid) in enumerate(buttons):
+            bx = x + 8 + i * (bw + 3)
+            is_hov = (self.hovered_fx == hid)
+
+            cr.new_path()
+            self._rounded_rect(cr, bx, by, bw, bh, 4)
+            if is_hov:
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.25 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.85 * p)
+                cr.set_line_width(1.0)
+                cr.stroke()
+            else:
+                cr.set_source_rgba(0.12, 0.16, 0.22, 0.60 * p)
+                cr.fill_preserve()
+                cr.set_source_rgba(C_BORDER_BASE[0], C_BORDER_BASE[1], C_BORDER_BASE[2], 0.30 * p)
+                cr.set_line_width(0.7)
+                cr.stroke()
+
+            layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 6.5"))
+            layout.set_text(blbl, -1)
+            tw, th = layout.get_pixel_size()
+            cr.set_source_rgba(C_GREEN[0] if is_hov else C_TEXT_WHITE[0], C_GREEN[1] if is_hov else C_TEXT_WHITE[1], C_GREEN[2] if is_hov else C_TEXT_WHITE[2], 0.95 * p if is_hov else 0.75 * p)
+            cr.move_to(bx + (bw - tw) / 2, by + (bh - th) / 2)
+            PangoCairo.show_layout(cr, layout)
+            self.fx_hitboxes.append((hid, bx, by, bw, bh))
+
+    def _draw_fx_step_btn(self, cr, layout, label, x, y, w, h, hid, p):
+        is_hov = (self.hovered_fx == hid)
+        cr.new_path()
+        self._rounded_rect(cr, x, y, w, h, 6)
+        if is_hov:
+            cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.25 * p)
+            cr.fill_preserve()
+            cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.85 * p)
+            cr.set_line_width(1.2)
+            cr.stroke()
+        else:
+            cr.set_source_rgba(C_SURFACE[0], C_SURFACE[1], C_SURFACE[2], 0.70 * p)
+            cr.fill_preserve()
+            cr.set_source_rgba(0.3, 0.4, 0.5, 0.35 * p)
+            cr.set_line_width(0.8)
+            cr.stroke()
+
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 8.0"))
+        layout.set_text(label, -1)
+        tw, th = layout.get_pixel_size()
+        cr.set_source_rgba(C_GREEN[0] if is_hov else C_TEXT_WHITE[0], C_GREEN[1] if is_hov else C_TEXT_WHITE[1], C_GREEN[2] if is_hov else C_TEXT_WHITE[2], 1.0 * p if is_hov else 0.75 * p)
+        cr.move_to(x + (w - tw) / 2, y + (h - th) / 2)
+        PangoCairo.show_layout(cr, layout)
+        self.fx_hitboxes.append((hid, x, y, w, h))
+
+    def _draw_fx_metric_pill(self, cr, layout, x, y, w, h, title, val, p):
+        cr.new_path()
+        self._rounded_rect(cr, x, y, w, h, 8)
+        cr.set_source_rgba(C_SURFACE[0], C_SURFACE[1], C_SURFACE[2], 0.50 * p)
+        cr.fill_preserve()
+        cr.set_source_rgba(C_BORDER_BASE[0], C_BORDER_BASE[1], C_BORDER_BASE[2], 0.30 * p)
+        cr.set_line_width(0.8)
+        cr.stroke()
+
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 6.8"))
+        layout.set_text(title, -1)
+        cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.65 * p)
+        cr.move_to(x + 8, y + 6)
+        PangoCairo.show_layout(cr, layout)
+
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 9.0"))
+        layout.set_text(val, -1)
+        cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.90 * p)
+        cr.move_to(x + 8, y + 22)
+        PangoCairo.show_layout(cr, layout)
+
     # ==========================================================================
     # INTERACTION & EVENTS
     # ==========================================================================
@@ -1091,6 +1481,7 @@ class CyberWingWindow(Gtk.Window):
         self.hovered_initiate = False
         self.hovered_bg = False
         self.hovered_cancel = False
+        self.hovered_fx = None
         self.queue_draw()
 
     def _update_hover(self):
@@ -1102,6 +1493,7 @@ class CyberWingWindow(Gtk.Window):
         self.hovered_initiate = False
         self.hovered_bg = False
         self.hovered_cancel = False
+        self.hovered_fx = None
 
         if self._close_hitbox:
             bx, by, bw, bh = self._close_hitbox
@@ -1142,6 +1534,12 @@ class CyberWingWindow(Gtk.Window):
                     if bx <= x <= bx + bw and by <= y <= by + bh:
                         self.hovered_initiate = True
                         return
+        elif self.active_app == "fxcalc":
+            for item in self.fx_hitboxes:
+                hid, bx, by, bw, bh = item
+                if bx <= x <= bx + bw and by <= y <= by + bh:
+                    self.hovered_fx = hid
+                    return
 
     def on_click(self, _w, event):
         if event.button != 1:
@@ -1183,6 +1581,31 @@ class CyberWingWindow(Gtk.Window):
                 if self.hovered_initiate:
                     self._arm_timer()
                     return
+        elif self.active_app == "fxcalc":
+            if self.hovered_fx:
+                hid = self.hovered_fx
+                if hid.startswith("fx_pair:"):
+                    self.fx_pair_idx = int(hid.split(":")[1])
+                    self.queue_draw()
+                    return
+                elif hid.startswith("fx_margin:"):
+                    delta = float(hid.split(":")[1])
+                    self.fx_margin = max(100.0, self.fx_margin + delta)
+                    self.queue_draw()
+                    return
+                elif hid.startswith("fx_lev:"):
+                    self.fx_leverage = float(hid.split(":")[1])
+                    self.queue_draw()
+                    return
+                elif hid.startswith("fx_risk:"):
+                    self.fx_risk_pct = float(hid.split(":")[1])
+                    self.queue_draw()
+                    return
+                elif hid.startswith("fx_sl:"):
+                    delta = float(hid.split(":")[1])
+                    self.fx_stop_loss_pips = max(1.0, min(500.0, self.fx_stop_loss_pips + delta))
+                    self.queue_draw()
+                    return
 
     def on_scroll(self, _w, event):
         if self.active_app == "timer" and not self.timer_counting:
@@ -1192,6 +1615,10 @@ class CyberWingWindow(Gtk.Window):
                     delta = 60 if event.direction == Gdk.ScrollDirection.UP else -60
                     self.timer_seconds = max(60, min(86400, self.timer_seconds + delta))
                     self.queue_draw()
+        elif self.active_app == "fxcalc":
+            delta = 1.0 if event.direction == Gdk.ScrollDirection.UP else -1.0
+            self.fx_stop_loss_pips = max(1.0, min(500.0, self.fx_stop_loss_pips + delta))
+            self.queue_draw()
 
     def on_key_press(self, _widget, event):
         if event.keyval == Gdk.KEY_Escape:
