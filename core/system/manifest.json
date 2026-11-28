@@ -1,15 +1,15 @@
 {
   "format_version": "1.1",
-  "generated_at": "2026-11-28T15:36:37Z",
+  "generated_at": "2026-11-28T15:41:56Z",
   "version": "1.0.0",
-  "manifest_id": "46abc2858fcaddba0b1ef1fab4ce939a13223bbc3f7670deb40ad7ff046f8024",
-  "commit": "04b0b05ebf14961703b5306786e3cd43d686605b",
+  "manifest_id": "48f174bab4d8f6c3e40006164a89248d5a186f76e4b8f9fe7750adafdacf0418",
+  "commit": "32645802a0869c375441b6578850e39d9ff43b72",
   "branch": "main",
   "repository": "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git",
   "raw_base_url": "https://raw.githubusercontent.com/flowork-os/AI-Operating-System-AI-OS-/main",
-  "total_files": 23916,
+  "total_files": 23917,
   "total_symlinks": 207,
-  "total_bytes": 790551483,
+  "total_bytes": 790553508,
   "files": {
     "core/ARCHITECT.md": {
       "sha256": "f4807c67526e378d33e3d99169c1873d9013770102c4b9da28d89cfb9ff1fe68",
@@ -125922,7 +125922,7 @@
       "target": "/opt/floworkos/system/environment"
     },
     "core/system/version.json": {
-      "sha256": "7b6e69dd02b66f2bf51214d572ba8d4fe2b383815d1858422fded22b289a9db3",
+      "sha256": "6ec7a9f5b9e034f7cecf2c0c1a9f92abfdb1a29079bb58015675d0c78ed75fb2",
       "size": 452,
       "mode": "664",
       "target": "/opt/floworkos/system/version.json"
@@ -127290,8 +127290,8 @@
       "target": "/opt/floworkos/system/system_promp/promps/02_operational_guidelines.md"
     },
     "core/system/system_promp/promps/triggers.json": {
-      "sha256": "3200f6e8dd94115958c8d2c45dd36115b8f3efb230c8b28ee05fc632d1c12856",
-      "size": 76976,
+      "sha256": "d9c0f7a5dd80362c1488ec576ae6849913c7d912a77ca29ee8dd33e503e737f2",
+      "size": 77495,
       "mode": "664",
       "target": "/opt/floworkos/system/system_promp/promps/triggers.json"
     },
@@ -129364,6 +129364,12 @@
       "size": 1389,
       "mode": "644",
       "target": "/opt/floworkos/system/system_promp/promps/triggers/anti_gimmick_brutalist_engineering.md"
+    },
+    "core/system/system_promp/promps/triggers/orbital_cyber_wings_geometry.md": {
+      "sha256": "90b364337b6e5c541e18cdc78ce09baa666421438adca9b754c6ee1c799ced1e",
+      "size": 1506,
+      "mode": "644",
+      "target": "/opt/floworkos/system/system_promp/promps/triggers/orbital_cyber_wings_geometry.md"
     },
     "core/system/system_promp/promps/triggers/multi_engine_inference_routing.md": {
       "sha256": "aec284c859b3ee1101ddffae89935717eb0fc2501b5f219de5ea84d26bae4842",

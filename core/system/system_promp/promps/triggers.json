@@ -906,6 +906,12 @@
       "file": "triggers/shutdown_timer_and_core_engine_placement.md",
       "rule": "Triggered when configuring, debugging, or extending the Sovereign Shutdown Timer, Tarot Oracle, or enforcing the canonical separation between /opt/floworkos/apps/ and /opt/floworkos/engine/.",
       "condition": "hasKeywords([\"shutdown_timer\", \"power_timer\", \"tarot_oracle\", \"engine_placement\", \"systemctl_reboot\", \"countdown_timer\", \"power_control\"]) || promptContains([\"timer\", \"shutdown\", \"restart\", \"waktu mundur\", \"tarot\", \"engine\", \"app inti\", \"irisan\"]) "
+    },
+    {
+      "id": "orbital_cyber_wings_geometry",
+      "file": "triggers/orbital_cyber_wings_geometry.md",
+      "rule": "Triggered when modifying, debugging, or styling Flowork OS Orbital Cyber Wings, cockpit flanks, or single-slot reactor extensions.",
+      "condition": "hasKeywords([\"cyber_wing\", \"orbital_reactor\", \"cockpit_wings\", \"reactor_hud\", \"wing_geometry\", \"single_slot_swap\"]) || promptContains([\"sayap\", \"sayap kokpit\", \"cyber wing\", \"orbital wing\", \"power control wing\"])"
     }
   ]
 }
