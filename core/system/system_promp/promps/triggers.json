@@ -900,6 +900,12 @@
       "file": "triggers/quantum_forex_calendar_hud_invariants.md",
       "rule": "Triggered when developing, configuring, or modifying the sovereign Quantum Forex Calendar Desktop HUD, session radars, market feeds, or currency filters.",
       "condition": "hasKeywords([\"forex\", \"forex_calendar\", \"economic_calendar\", \"forex_hud\", \"trading_sessions\", \"xau\", \"gold_radar\", \"market_session\"]) || promptContains([\"forex\", \"kalender forex\", \"sesi trading\", \"sydney tokyo london\", \"jadwal rilis ekonomi\", \"gold radar\", \"xau/usd\"])"
+    },
+    {
+      "id": "shutdown_timer_and_core_engine_placement",
+      "file": "triggers/shutdown_timer_and_core_engine_placement.md",
+      "rule": "Triggered when configuring, debugging, or extending the Sovereign Shutdown Timer, Tarot Oracle, or enforcing the canonical separation between /opt/floworkos/apps/ and /opt/floworkos/engine/.",
+      "condition": "hasKeywords([\"shutdown_timer\", \"power_timer\", \"tarot_oracle\", \"engine_placement\", \"systemctl_reboot\", \"countdown_timer\", \"power_control\"]) || promptContains([\"timer\", \"shutdown\", \"restart\", \"waktu mundur\", \"tarot\", \"engine\", \"app inti\", \"irisan\"]) "
     }
   ]
 }

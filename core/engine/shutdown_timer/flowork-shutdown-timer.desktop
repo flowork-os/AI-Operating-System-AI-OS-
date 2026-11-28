@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Shutdown Timer
+Comment=Sovereign Power & Countdown Control (Shutdown, Restart, Sleep)
+Exec=/opt/floworkos/bin/flowork-shutdown-timer
+Icon=system-shutdown-symbolic
+Terminal=false
+Type=Application
+Categories=System;Utility;
+StartupNotify=true

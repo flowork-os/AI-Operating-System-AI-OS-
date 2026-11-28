@@ -1,15 +1,15 @@
 {
   "format_version": "1.1",
-  "generated_at": "2026-11-28T12:14:22Z",
+  "generated_at": "2026-11-28T14:39:53Z",
   "version": "1.0.0",
-  "manifest_id": "5f82c94ad79ff507d8528fd1e481ab9b27c3433d281a7bb3f9f8964b0b970403",
-  "commit": "056651e3ea587b5bfd46056c611559709b6ffc29",
+  "manifest_id": "1d2713fd2c2cd54c4ba899320a4d24670a7947687d7884202b9847f752eefdb6",
+  "commit": "d5f6359f271800efb4e2713ad5bb8a396c629afa",
   "branch": "main",
   "repository": "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git",
   "raw_base_url": "https://raw.githubusercontent.com/flowork-os/AI-Operating-System-AI-OS-/main",
-  "total_files": 23900,
-  "total_symlinks": 205,
-  "total_bytes": 789280612,
+  "total_files": 23901,
+  "total_symlinks": 206,
+  "total_bytes": 789299049,
   "files": {
     "core/ARCHITECT.md": {
       "sha256": "f4807c67526e378d33e3d99169c1873d9013770102c4b9da28d89cfb9ff1fe68",
@@ -125681,12 +125681,6 @@
       "mode": "664",
       "target": "/opt/floworkos/assets/tarot/cards/ar01.jpg"
     },
-    "core/config/user_profile.json": {
-      "sha256": "f0b2ed6a7b52c4fed41ff34551388c62ddfb41b11a7cd96d89644bbad3228ad7",
-      "size": 102,
-      "mode": "664",
-      "target": "/opt/floworkos/config/user_profile.json"
-    },
     "core/sounds/system_ready.wav": {
       "sha256": "5ccd0087e0e5de840ee3607fe7ce6e78f1aa1cd6b6850a3a46fb1aa676605aa4",
       "size": 30912,
@@ -125928,7 +125922,7 @@
       "target": "/opt/floworkos/system/environment"
     },
     "core/system/version.json": {
-      "sha256": "18206d515d64c224f92fe0ac06ec594f4b4e365e47efbc5b0f6c4244e277cf33",
+      "sha256": "ce5286ce1fd48840690e357291a050865ecc06f49f84ab1a9831fcdc2ddc8f8a",
       "size": 452,
       "mode": "664",
       "target": "/opt/floworkos/system/version.json"
@@ -127296,8 +127290,8 @@
       "target": "/opt/floworkos/system/system_promp/promps/02_operational_guidelines.md"
     },
     "core/system/system_promp/promps/triggers.json": {
-      "sha256": "5d1233b751ad85b6f092b9c958ac2d93d0da80e462d06962cd8ff216f136488b",
-      "size": 76329,
+      "sha256": "3200f6e8dd94115958c8d2c45dd36115b8f3efb230c8b28ee05fc632d1c12856",
+      "size": 76976,
       "mode": "664",
       "target": "/opt/floworkos/system/system_promp/promps/triggers.json"
     },
@@ -129161,6 +129155,12 @@
       "mode": "644",
       "target": "/opt/floworkos/system/system_promp/promps/triggers/suno_audio_pipeline.md"
     },
+    "core/system/system_promp/promps/triggers/shutdown_timer_and_core_engine_placement.md": {
+      "sha256": "36df784ff5ef5f5956915466ebf57cab2ea450f64d08e27312423445a788fbb2",
+      "size": 1754,
+      "mode": "644",
+      "target": "/opt/floworkos/system/system_promp/promps/triggers/shutdown_timer_and_core_engine_placement.md"
+    },
     "core/system/system_promp/promps/triggers/chatbot_history_vault_interaction.md": {
       "sha256": "081b7f31fadb00c41a528be44187f6c9619f76310d7f65c731484a7f1f870384",
       "size": 1602,
@@ -130210,12 +130210,6 @@
       "size": 782,
       "mode": "664",
       "target": "/opt/floworkos/apps/downflow.desktop"
-    },
-    "core/apps/flowork-tarot-oracle.desktop": {
-      "sha256": "4ef0424b67bcb103a51e93403d1770b07e5ce2a5ae13144e6ea3010cf32763b0",
-      "size": 262,
-      "mode": "644",
-      "target": "/opt/floworkos/apps/flowork-tarot-oracle.desktop"
     },
     "core/apps/flowork-settings.desktop": {
       "sha256": "e2356dbcd8215cca701abede573e15e104ae211b28cc136f1b0ea6be463388de",
@@ -139817,6 +139811,12 @@
       "mode": "775",
       "target": "/opt/floworkos/engine/tarot_oracle/tarot_deck_hud.py"
     },
+    "core/engine/tarot_oracle/flowork-tarot-oracle.desktop": {
+      "sha256": "4ef0424b67bcb103a51e93403d1770b07e5ce2a5ae13144e6ea3010cf32763b0",
+      "size": 262,
+      "mode": "644",
+      "target": "/opt/floworkos/engine/tarot_oracle/flowork-tarot-oracle.desktop"
+    },
     "core/engine/tarot_oracle/tarot_oracle.py": {
       "sha256": "a8a19f399b4059b31a5b085e9b30a0c16c3caa68550ab01de8c9f8b2c3f51eb1",
       "size": 90760,
@@ -139943,9 +139943,15 @@
       "mode": "775",
       "target": "/opt/floworkos/engine/stem_split/stem_split.py"
     },
+    "core/engine/shutdown_timer/flowork-shutdown-timer.desktop": {
+      "sha256": "595f1ff96e15319c62c7649510a5482348377155bbe0a076f06b3f62b2662376",
+      "size": 262,
+      "mode": "664",
+      "target": "/opt/floworkos/engine/shutdown_timer/flowork-shutdown-timer.desktop"
+    },
     "core/engine/shutdown_timer/shutdown_timer.py": {
-      "sha256": "0bc81dddd8db59b4a21fa60a4207aa8721d605071900eef2a96170dd8bec7915",
-      "size": 27686,
+      "sha256": "6567f75138381ee7d782c8574235773b026d3bbd34279126b9cbb08f41c68a06",
+      "size": 43562,
       "mode": "775",
       "target": "/opt/floworkos/engine/shutdown_timer/shutdown_timer.py"
     },
@@ -144148,6 +144154,10 @@
     "system/bin/flowork-title-gen": {
       "link_target": "/opt/floworkos/engine/title_generator/title_generator.py",
       "target": "/usr/local/bin/flowork-title-gen"
+    },
+    "system/bin/flowork-shutdown-timer": {
+      "link_target": "/opt/floworkos/bin/flowork-shutdown-timer",
+      "target": "/usr/local/bin/flowork-shutdown-timer"
     },
     "system/bin/flowork-landlock": {
       "link_target": "/opt/floworkos/bin/flowork-landlock",
