@@ -792,7 +792,7 @@ class UnifiedReactorHudWindow(Gtk.Window):
                     elif 62 <= deg <= 118:
                         self.hovered_sector = "media"
                     elif 122 <= deg <= 178:
-                        self.hovered_sector = "sistem"
+                        self.hovered_sector = "shutdown"
                     elif 182 <= deg <= 238:
                         self.hovered_sector = "oracle"
                     elif 242 <= deg <= 298:
@@ -1050,8 +1050,30 @@ class UnifiedReactorHudWindow(Gtk.Window):
             self._trigger_f_cleaner_headless()
             return True
 
-        # 4. Click Irisan Sector -> Toggle Targeted Bloom
+        # 4. Click Irisan Sector -> Toggle Targeted Bloom (oracle/shutdown = direct launch)
         if self.hovered_sector is not None:
+            if self.hovered_sector == "oracle":
+                # Direct launch Tarot Oracle — no submenu bloom
+                try:
+                    subprocess.Popen(["/opt/floworkos/bin/flowork-tarot-oracle"], start_new_session=True)
+                except Exception:
+                    pass
+                self.active_sector = None
+                self.target_progress = 0.0
+                self._update_input_shape()
+                self.queue_draw()
+                return True
+            if self.hovered_sector == "shutdown":
+                # Direct launch Shutdown Timer — no submenu bloom
+                try:
+                    subprocess.Popen(["/opt/floworkos/bin/flowork-shutdown-timer"], start_new_session=True)
+                except Exception:
+                    pass
+                self.active_sector = None
+                self.target_progress = 0.0
+                self._update_input_shape()
+                self.queue_draw()
+                return True
             if self.active_sector == self.hovered_sector:
                 self.active_sector = None
             else:
@@ -2373,8 +2395,8 @@ class UnifiedReactorHudWindow(Gtk.Window):
             ("koding", 302, 358, 330, C_GREEN, "CODE", "IDE, AI & Terminal", self.koding_apps, True, "right", -140, -10),
             ("internet", 2, 58, 30, C_CYAN, "WEB", "Browser & Network", self.internet_apps, True, "right", -40, 10),
             ("media", 62, 118, 90, C_AMBER, "MEDIA", "3D, Audio & Video", self.media_apps, True, "right", 60, -10),
-            ("sistem", 122, 178, 150, C_RED, "SYSTEM", "Files & OS Control", self.sistem_apps, True, "left", 60, 10),
-            ("oracle", 182, 238, 210, C_MINT, "ORACLE", "Tarot & Sovereign", self.oracle_apps, True, "left", -40, -10),
+            ("shutdown", 122, 178, 150, C_RED, "TIMER", "Shutdown Timer", self.sistem_apps, True, "left", 60, 10),
+            ("oracle", 182, 238, 210, C_MINT, "TAROT", "Sovereign Oracle", self.oracle_apps, True, "left", -40, -10),
             ("trending", 242, 298, 270, C_GOLD, "TRENDING", "GitHub & Tech", self.trending_items, False, "left", -140, 10),
         ]
 
