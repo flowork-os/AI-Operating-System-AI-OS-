@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+# ==============================================================================
+# 👑 FLOWORK OS — UNIVERSAL APPLICATION & APK AUTO-DETECTION ENGINE
+# Automatically scans, detects, extracts icons, and registers all installed
+# Android APKs and Linux Applications into Start Menu & Launchpad.
+# Zero Manual Registration. 100% Autonomous.
+# ==============================================================================
+
+import os
+import sys
+import subprocess
+import json
+import zipfile
+import re
+import tempfile
+import shutil
+
+FLOWORK_ROOT = os.getenv("FLOWORK_ROOT", "/opt/floworkos")
+ANDROID_SDK = os.getenv("ANDROID_SDK_ROOT", os.path.join(FLOWORK_ROOT, "android-sdk"))
+AAPT_BIN = os.path.join(ANDROID_SDK, "build-tools/34.0.0/aapt")
+ADB_BIN = os.path.join(ANDROID_SDK, "platform-tools/adb") if os.path.exists(os.path.join(ANDROID_SDK, "platform-tools/adb")) else "/usr/bin/adb"
+
+HOME_DIR = os.path.expanduser("~")
+USER_APPS_DIR = os.path.join(HOME_DIR, ".local/share/applications")
+USER_ICONS_DIR = os.path.join(HOME_DIR, ".local/share/icons/hicolor/128x128/apps")
+SYSTEM_APPS_DIR = "/usr/share/applications"
+SYSTEM_ICONS_DIR = os.path.join(FLOWORK_ROOT, "icons")
+REGISTRY_DIR = os.path.join(HOME_DIR, ".config/flowork-apk")
+REGISTRY_FILE = os.path.join(REGISTRY_DIR, "installed_apps.json")
+DEFAULT_ICON = os.path.join(SYSTEM_ICONS_DIR, "android.png")
+
+os.makedirs(USER_APPS_DIR, exist_ok=True)
+os.makedirs(USER_ICONS_DIR, exist_ok=True)
+os.makedirs(REGISTRY_DIR, exist_ok=True)
+os.makedirs(SYSTEM_ICONS_DIR, exist_ok=True)
+
+FRIENDLY_NAMES = {
+    "com.shopee.id": "Shopee",
+    "com.lemon.lvoverseas": "CapCut",
+    "com.openai.chatgpt": "ChatGPT",
+    "com.worldance.drama": "Melolo",
+    "asia.dramapendek.melolo": "Melolo",
+    "com.suno.android": "Suno",
+    "com.android.vending": "Google Play Store",
+    "com.aurora.store": "Aurora Store",
+    "org.fdroid.fdroid": "F-Droid",
+    "com.storymatrix.drama": "DramaBox",
+    "com.facebook.lite": "Facebook Lite",
+    "com.zhiliaoapp.musically.go": "TikTok Lite",
+    "com.whatsapp": "WhatsApp"
+}
+
+IGNORED_PACKAGES = {
+    "com.google.android.contactkeys",
+    "com.google.android.verifier"
+}
+
+def is_adb_online():
+    try:
+        out = subprocess.check_output([ADB_BIN, "devices"], text=True, timeout=3)
+        for line in out.splitlines():
+            if "emulator-5554" in line and "device" in line and not "offline" in line:
+                return True
+    except Exception:
+        pass
+    return False
+
+def load_registry():
+    if os.path.exists(REGISTRY_FILE):
+        try:
+            with open(REGISTRY_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_registry(data):
+    try:
+        with open(REGISTRY_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"[flowork-app-sync] Warning saving registry: {e}", file=sys.stderr)
+
+def extract_icon_from_apk(apk_path, package_name):
+    icon_dest_system = os.path.join(SYSTEM_ICONS_DIR, f"{package_name}.png")
+    icon_dest_user = os.path.join(USER_ICONS_DIR, f"flowork-apk-{package_name}.png")
+
+    if os.path.exists(icon_dest_system) and os.path.getsize(icon_dest_system) > 500:
+        return icon_dest_system
+    if os.path.exists(icon_dest_user) and os.path.getsize(icon_dest_user) > 500:
+        return icon_dest_user
+
+    try:
+        with zipfile.ZipFile(apk_path, "r") as z:
+            all_files = z.namelist()
+            densities = ["xxxhdpi", "xxhdpi", "xhdpi", "hdpi", "mdpi"]
+            best_entry = None
+
+            for d in densities:
+                matches = [f for f in all_files if d in f and f.lower().endswith(".png") and ("ic_launcher" in f or "icon" in f)]
+                if matches:
+                    best_entry = matches[0]
+                    break
+
+            if not best_entry:
+                pngs = [f for f in all_files if f.lower().endswith(".png") and "res/" in f and ("ic_launcher" in f or "icon" in f or "logo" in f)]
+                if pngs:
+                    best_entry = pngs[0]
+
+            if best_entry:
+                icon_bytes = z.read(best_entry)
+                try:
+                    with open(icon_dest_system, "wb") as f_sys:
+                        f_sys.write(icon_bytes)
+                    final_path = icon_dest_system
+                except PermissionError:
+                    pass
+                with open(icon_dest_user, "wb") as f_usr:
+                    f_usr.write(icon_bytes)
+                return icon_dest_user
+    except Exception as e:
+        print(f"[flowork-app-sync] Icon extraction warning for {package_name}: {e}", file=sys.stderr)
+
+    return DEFAULT_ICON
+
+def get_installed_android_packages():
+    if not is_adb_online():
+        return []
+    try:
+        res = subprocess.run([ADB_BIN, "shell", "pm", "list", "packages", "-3"],
+                             capture_output=True, text=True, timeout=5)
+        pkgs = [line.replace("package:", "").strip() for line in res.stdout.splitlines() if line.strip()]
+        # Add launchable system apps like Play Store
+        pkgs.append("com.android.vending")
+        return [p for p in set(pkgs) if p not in IGNORED_PACKAGES]
+    except Exception as e:
+        print(f"[flowork-app-sync] Error listing packages: {e}", file=sys.stderr)
+        return []
+
+def get_launchable_activity(package):
+    try:
+        res = subprocess.run([ADB_BIN, "shell", "cmd", "package", "resolve-activity", "--brief", package],
+                             capture_output=True, text=True, timeout=4)
+        for line in res.stdout.splitlines():
+            line = line.strip()
+            if "/" in line and not line.startswith("priority="):
+                parts = line.split("/")
+                act = parts[1] if len(parts) > 1 else ""
+                return act
+    except Exception:
+        pass
+    return ""
+
+def get_base_apk_path(package):
+    try:
+        res = subprocess.run([ADB_BIN, "shell", "pm", "path", package],
+                             capture_output=True, text=True, timeout=4)
+        for line in res.stdout.splitlines():
+            line = line.replace("package:", "").strip()
+            if line.endswith("base.apk"):
+                return line
+            if line.endswith(".apk") and not "split_" in line:
+                return line
+        lines = [l.replace("package:", "").strip() for l in res.stdout.splitlines() if l.strip()]
+        if lines:
+            return lines[0]
+    except Exception:
+        pass
+    return None
+
+def write_desktop_entry(meta):
+    package = meta["package"]
+    label = meta["label"]
+    icon = meta.get("icon", DEFAULT_ICON)
+    clean_label = re.sub(r'[^a-zA-Z0-9_-]', '_', label)
+    desktop_filename = f"flowork-apk-{package}.desktop"
+    target_user_file = os.path.join(USER_APPS_DIR, desktop_filename)
+
+    categories = "Android;Utility;AudioVideo;Network;"
+    content = f"""[Desktop Entry]
+Type=Application
+Version=1.0
+Name={label}
+GenericName=Android Application
+Comment=Android App {label} on Flowork OS
+Exec={FLOWORK_ROOT}/bin/flowork-apk launch {package}
+Icon={icon}
+Terminal=false
+Categories={categories}
+Keywords=android;apk;mobile;{clean_label.lower()};
+StartupNotify=true
+"""
+
+    changed = True
+    if os.path.exists(target_user_file):
+        try:
+            with open(target_user_file, "r") as f:
+                if f.read() == content:
+                    changed = False
+        except Exception:
+            pass
+
+    if changed:
+        with open(target_user_file, "w") as f:
+            f.write(content)
+        os.chmod(target_user_file, 0o755)
+
+        # Also write to system apps dir if writable
+        target_sys_file = os.path.join(SYSTEM_APPS_DIR, desktop_filename)
+        try:
+            with open(target_sys_file, "w") as f:
+                f.write(content)
+            os.chmod(target_sys_file, 0o755)
+        except PermissionError:
+            pass
+
+    return target_user_file, changed
+
+def sync_android_subsystem():
+    if not is_adb_online():
+        print("[flowork-app-sync] Android Subsystem offline. Skipping guest sync.")
+        return 0, 0
+
+    # Ensure hidden API reflection is allowed on Android 14
+    subprocess.run([ADB_BIN, "shell", "settings", "put", "global", "hidden_api_policy", "1"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    installed_pkgs = get_installed_android_packages()
+    reg = load_registry()
+    newly_added = 0
+    updated = 0
+
+    print(f"[flowork-app-sync] Scanning {len(installed_pkgs)} Android packages...")
+
+    for pkg in installed_pkgs:
+        activity = get_launchable_activity(pkg)
+        if not activity:
+            continue
+
+        existing_meta = reg.get(pkg)
+        desktop_file = os.path.join(USER_APPS_DIR, f"flowork-apk-{pkg}.desktop")
+
+        if existing_meta and os.path.exists(desktop_file) and existing_meta.get("icon") and os.path.exists(existing_meta["icon"]):
+            # Fast path: already registered and valid
+            continue
+
+        # Need to extract metadata & icon
+        label = FRIENDLY_NAMES.get(pkg)
+        icon_path = DEFAULT_ICON
+
+        base_apk_remote = get_base_apk_path(pkg)
+        if base_apk_remote:
+            with tempfile.NamedTemporaryFile(suffix=".apk", delete=False) as tmp_apk:
+                tmp_apk_path = tmp_apk.name
+            try:
+                pull_res = subprocess.run([ADB_BIN, "pull", base_apk_remote, tmp_apk_path],
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                if pull_res.returncode == 0 and os.path.getsize(tmp_apk_path) > 1000:
+                    # Run AAPT for label
+                    if os.path.exists(AAPT_BIN):
+                        try:
+                            aapt_out = subprocess.check_output([AAPT_BIN, "dump", "badging", tmp_apk_path],
+                                                               text=True, stderr=subprocess.DEVNULL, timeout=5)
+                            m_label = re.search(r"application-label(?:-[a-zA-Z]+)?:'([^']+)'", aapt_out)
+                            if m_label and not label:
+                                label = m_label.group(1).strip()
+                        except Exception:
+                            pass
+
+                    # Extract Icon
+                    extracted_icon = extract_icon_from_apk(tmp_apk_path, pkg)
+                    if extracted_icon and os.path.exists(extracted_icon):
+                        icon_path = extracted_icon
+            finally:
+                if os.path.exists(tmp_apk_path):
+                    try:
+                        os.remove(tmp_apk_path)
+                    except OSError:
+                        pass
+
+        if not label:
+            label = FRIENDLY_NAMES.get(pkg, pkg.split(".")[-1].capitalize())
+
+        meta = {
+            "package": pkg,
+            "label": label,
+            "activity": activity,
+            "icon": icon_path,
+            "orientation": "portrait" if any(k in pkg.lower() for k in ["shopee", "capcut", "drama", "melolo", "tiktok", "whatsapp", "lite"]) else "landscape"
+        }
+
+        target_file, was_changed = write_desktop_entry(meta)
+        reg[pkg] = meta
+        if was_changed:
+            newly_added += 1
+            print(f"[flowork-app-sync] [AUTO-REGISTERED] {label} ({pkg}) -> {target_file}")
+        else:
+            updated += 1
+
+    # Prune uninstalled packages
+    pruned = 0
+    all_desktop_files = [f for f in os.listdir(USER_APPS_DIR) if f.startswith("flowork-apk-") and f.endswith(".desktop")]
+    for df in all_desktop_files:
+        pkg_from_df = df[len("flowork-apk-"):-len(".desktop")]
+        if pkg_from_df not in installed_pkgs and pkg_from_df not in ["installer", "manager", "store"]:
+            try:
+                os.remove(os.path.join(USER_APPS_DIR, df))
+                sys_df = os.path.join(SYSTEM_APPS_DIR, df)
+                if os.path.exists(sys_df):
+                    try:
+                        os.remove(sys_df)
+                    except PermissionError:
+                        pass
+                if pkg_from_df in reg:
+                    del reg[pkg_from_df]
+                pruned += 1
+                print(f"[flowork-app-sync] [PRUNED] Removed uninstalled app: {pkg_from_df}")
+            except Exception as e:
+                print(f"[flowork-app-sync] Error pruning {df}: {e}", file=sys.stderr)
+
+    save_registry(reg)
+
+    if newly_added > 0 or pruned > 0:
+        subprocess.run(["update-desktop-database", USER_APPS_DIR],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if os.path.exists(SYSTEM_APPS_DIR):
+            try:
+                subprocess.run(["update-desktop-database", SYSTEM_APPS_DIR],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
+
+    return newly_added, pruned
+
+def main():
+    print("=================================================================")
+    print("👑 FLOWORK OS — SOVEREIGN APPLICATION & APK SYNC")
+    print("=================================================================")
+    added, pruned = sync_android_subsystem()
+    print(f"[flowork-app-sync SUCCESS] Synchronized: {added} registered, {pruned} pruned.")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,33 @@
+{
+  "com.lemon.lvoverseas": {
+    "package": "com.lemon.lvoverseas",
+    "label": "CapCut",
+    "activity": "com.vega.main.MainActivity",
+    "icon": "/opt/floworkos/icons/com.lemon.lvoverseas.png",
+    "orientation": "portrait",
+    "apk_path": "/opt/floworkos/apk/com.lemon.lvoverseas.apk"
+  },
+  "com.worldance.drama": {
+    "package": "com.worldance.drama",
+    "label": "Melolo",
+    "activity": "com.worldance.novel.pages.splash.SplashActivity",
+    "icon": "/opt/floworkos/icons/android.png",
+    "orientation": "portrait",
+    "apk_path": "/opt/floworkos/apk/com.worldance.drama.apk"
+  },
+  "com.google.android.safetycore": {
+    "package": "com.google.android.safetycore",
+    "label": "Android System SafetyCore",
+    "activity": "",
+    "icon": "/opt/floworkos/icons/android.png",
+    "orientation": "landscape",
+    "apk_path": "/opt/floworkos/apk/com.google.android.safetycore.apk"
+  },
+  "com.android.vending": {
+    "package": "com.android.vending",
+    "label": "Google Play Store",
+    "activity": ".AssetBrowserActivity",
+    "icon": "/opt/floworkos/icons/com.android.vending.png",
+    "orientation": "landscape"
+  }
+}

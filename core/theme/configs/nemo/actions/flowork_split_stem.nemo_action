@@ -1,0 +1,8 @@
+[Nemo Action]
+Name=🎤 Flowork: Pisah Vokal & Instrumental
+Comment=Isolate vocals and instrumental backing tracks into separate files
+Exec=/opt/floworkos/bin/flowork-audio-transformer split-stem %F
+Icon-Name=audio-volume-high
+Selection=notnone
+Extensions=mp3;wav;flac;m4a;ogg;opus;aac;
+Quote=double

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Tarot Oracle
+Comment=Quantum Synchronicity & Archetypal Destiny Engine (RWS 78 Cards)
+Exec=/opt/floworkos/bin/flowork-tarot-oracle
+Icon=eu.planete_kraus.Tarot
+Terminal=false
+Type=Application
+Categories=Utility;Philosophy;
+StartupNotify=true

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Flowork Sovereign Menu
+Comment=Orbital Radial Arc Application Launcher
+Exec=/opt/floworkos/bin/flowork-radial-launcher --toggle
+Icon=/usr/share/icons/flowork/flowork-emblem.svg
+Terminal=false
+Type=Application
+StartupNotify=false

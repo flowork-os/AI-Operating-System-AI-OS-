@@ -1,0 +1,422 @@
+#!/usr/bin/env python3
+"""
+Flowork OS — Sovereign Universal Transformer Engine
+Performs offline local multi-domain file & folder transformations:
+- AUDIO: split-stem, clean-ai, mastering, denoise, voice-boost, to-mp3, midi-render
+- IMAGE: remove-bg, upscale, to-webp, clean-exif
+- SECURITY: shred (DoD 3-pass + zero-fill forensic wipe)
+- FOLDER & ARCHIVE: clean-zip, 7z-ultra, unpack
+"""
+import os
+import sys
+import subprocess
+import shutil
+import zipfile
+import io
+from pathlib import Path
+
+FFMPEG = "/usr/bin/ffmpeg"
+FFPROBE = "/usr/bin/ffprobe"
+CONVERT = "/usr/bin/convert"
+ZIP_BIN = "/usr/bin/zip"
+SEVEN_ZIP = "/usr/bin/7z"
+FLUIDSYNTH = "/usr/bin/fluidsynth"
+DEFAULT_SF2 = "/usr/share/sounds/sf2/default-GM.sf2"
+SHRED_BIN = "/opt/floworkos/bin/flowork-shred"
+NOTIFY_SEND = "/usr/bin/notify-send"
+
+IMAGE_ENGINE_PYTHON = "/opt/floworkos/runtime/venvs/bg_remove/bin/python3"
+IMAGE_ENGINE_MODELS = "/opt/floworkos/runtime/models/u2netp"
+
+def validate_audio_file(src_path):
+    p = Path(src_path).resolve()
+    if not p.exists() or p.is_dir():
+        return False, f"File not found or is a directory: {p.name}"
+    try:
+        res = subprocess.run([
+            FFPROBE, "-v", "error", "-select_streams", "a:0",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0", str(p)
+        ], capture_output=True, text=True, timeout=1.5)
+        if "audio" in res.stdout.strip().lower():
+            return True, "Valid audio stream"
+    except Exception:
+        pass
+    return False, f"Not a valid audio stream: {p.name}"
+
+def validate_image_file(src_path):
+    p = Path(src_path).resolve()
+    if not p.exists() or p.is_dir():
+        return False, f"File not found or is a directory: {p.name}"
+    ext = p.suffix.lower()
+    if ext in {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif", ".svg"}:
+        return True, "Valid image extension"
+    return False, f"Not a valid image file: {p.name}"
+
+def send_notification(title, message, urgency="normal"):
+    if os.path.exists(NOTIFY_SEND):
+        try:
+            subprocess.run([
+                NOTIFY_SEND,
+                "-a", "Flowork Transformer",
+                "-u", urgency,
+                "-i", "dialog-information",
+                title,
+                message
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+# ==============================================================================
+# 0. FORENSIC SHREDDER
+# ==============================================================================
+def action_shred(target_path):
+    src = Path(target_path).resolve()
+    if not src.exists():
+        return False, f"Target not found: {src}"
+    if os.path.exists(SHRED_BIN):
+        res = subprocess.run([SHRED_BIN, str(src)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return (res.returncode == 0), ("Permanently wiped (3-pass + zero-fill)" if res.returncode == 0 else res.stderr)
+    else:
+        # Fallback shred via coreutils
+        res = subprocess.run(["shred", "-u", "-z", "-n", "3", str(src)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        return (res.returncode == 0), ("Wiped via coreutils shred" if res.returncode == 0 else res.stderr)
+
+# ==============================================================================
+# 1. AUDIO ACTIONS
+# ==============================================================================
+def action_audio_clean_ai(input_file):
+    """Sanitasi audio: strip AI watermarks, SynthID ultrasonic noise & bitexact."""
+    valid, vmsg = validate_audio_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}_clean_ai.mp3"
+    cmd = [
+        FFMPEG, "-y", "-i", str(src),
+        "-map_metadata", "-1",
+        "-fflags", "+bitexact",
+        "-af", "highpass=f=20,lowpass=f=19500",
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_audio_split_stem(input_file):
+    """Pemisahan vokal & instrumen stereo phase cancellation."""
+    valid, vmsg = validate_audio_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_inst = src.parent / f"{src.stem}_instrumental.mp3"
+    out_vocal = src.parent / f"{src.stem}_vocals.mp3"
+
+    cmd_inst = [
+        FFMPEG, "-y", "-i", str(src),
+        "-af", "stereotools=mutel=0:muter=0:phase=1,pan=stereo|c0=c0-c1|c1=c1-c0",
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_inst)
+    ]
+    res1 = subprocess.run(cmd_inst, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+
+    cmd_vocal = [
+        FFMPEG, "-y", "-i", str(src),
+        "-af", "pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,bandpass=f=1200:width_type=h:w=3200",
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_vocal)
+    ]
+    res2 = subprocess.run(cmd_vocal, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if res1.returncode == 0 and res2.returncode == 0:
+        return True, f"{out_inst.name} & {out_vocal.name}"
+    return False, res1.stderr or res2.stderr
+
+def action_audio_mastering(input_file):
+    """Normalisasi loudness broadcast standar Spotify/YouTube (-14 LUFS)."""
+    valid, vmsg = validate_audio_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}_mastered.mp3"
+    cmd = [
+        FFMPEG, "-y", "-i", str(src),
+        "-af", "loudnorm=I=-14:TP=-1.0:LRA=11:print_format=summary",
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_audio_voice_boost(input_file):
+    """Penjernihan vokal dan de-noise desis latar."""
+    valid, vmsg = validate_audio_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}_voice_boost.mp3"
+    cmd = [
+        FFMPEG, "-y", "-i", str(src),
+        "-af", "highpass=f=80,equalizer=f=2500:t=q:w=1.2:g=4,afftdn=nr=16:nf=-45,loudnorm=I=-14:TP=-1.0",
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_audio_to_mp3(input_file):
+    """Konversi ke bitexact 320k MP3."""
+    valid, vmsg = validate_audio_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}.mp3"
+    cmd = [
+        FFMPEG, "-y", "-i", str(src),
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_audio_midi_render(input_file):
+    """Render MIDI ke MP3 via FluidSynth GM Soundfont."""
+    src = Path(input_file).resolve()
+    if not src.exists():
+        return False, f"File not found: {src}"
+    
+    tmp_wav = src.parent / f".tmp_{src.stem}.wav"
+    out_mp3 = src.parent / f"{src.stem}.mp3"
+
+    cmd_synth = [
+        FLUIDSYNTH, "-ni", "-F", str(tmp_wav), "-r", "44100",
+        DEFAULT_SF2, str(src)
+    ]
+    res1 = subprocess.run(cmd_synth, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if res1.returncode != 0:
+        return False, f"FluidSynth synthesis failed: {res1.stderr}"
+
+    cmd_enc = [
+        FFMPEG, "-y", "-i", str(tmp_wav),
+        "-c:a", "libmp3lame", "-b:a", "320k",
+        str(out_mp3)
+    ]
+    res2 = subprocess.run(cmd_enc, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if tmp_wav.exists():
+        tmp_wav.unlink(missing_ok=True)
+
+    return (res2.returncode == 0), (str(out_mp3) if res2.returncode == 0 else res2.stderr)
+
+# ==============================================================================
+# 2. IMAGE ACTIONS
+# ==============================================================================
+def action_image_remove_bg(input_file):
+    """Hapus background gambar menjadi PNG transparan (Rembg u2netp offline)."""
+    valid, vmsg = validate_image_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}_nobg.png"
+
+    # Priority 1: Standalone offline Rembg in /opt/floworkos/runtime/venvs/bg_remove
+    if os.path.exists(IMAGE_ENGINE_PYTHON):
+        code = f"""
+import os, io, rembg
+from PIL import Image
+
+os.environ['U2NET_HOME'] = '{IMAGE_ENGINE_MODELS}'
+os.environ['NUMBA_CACHE_DIR'] = '/tmp/flowork_numba_cache'
+with open('{str(src)}', 'rb') as f:
+    in_bytes = f.read()
+
+session = rembg.new_session('u2netp')
+out_bytes = rembg.remove(in_bytes, session=session)
+with open('{str(out_file)}', 'wb') as f:
+    f.write(out_bytes)
+print('OK')
+"""
+        env = os.environ.copy()
+        env["U2NET_HOME"] = IMAGE_ENGINE_MODELS
+        res = subprocess.run([IMAGE_ENGINE_PYTHON, "-c", code], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res.returncode == 0 and out_file.exists():
+            return True, str(out_file)
+
+    # Priority 2: Fallback ImageMagick smart alpha transparency
+    cmd = [
+        CONVERT, str(src),
+        "-fuzz", "12%",
+        "-transparent", "white",
+        "-transparent", "#f5f5f5",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_image_upscale(input_file):
+    """Peningkatan resolusi 2x dengan filter Lanczos dan unsharp mask."""
+    valid, vmsg = validate_image_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}_2x{src.suffix}"
+    cmd = [
+        CONVERT, str(src),
+        "-filter", "Lanczos",
+        "-resize", "200%",
+        "-unsharp", "0x0.75+0.75+0.008",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_image_to_webp(input_file):
+    """Konversi ke format WebP terkompresi tanpa penurunan kualitas."""
+    valid, vmsg = validate_image_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}.webp"
+    cmd = [
+        CONVERT, str(src),
+        "-quality", "88",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+def action_image_clean_exif(input_file):
+    """Sanitasi privasi: buang EXIF, GPS lokasi, kamera serial & metadata."""
+    valid, vmsg = validate_image_file(input_file)
+    if not valid:
+        return False, vmsg
+    src = Path(input_file).resolve()
+    out_file = src.parent / f"{src.stem}_clean{src.suffix}"
+    cmd = [
+        CONVERT, str(src),
+        "-strip",
+        str(out_file)
+    ]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_file) if res.returncode == 0 else res.stderr)
+
+# ==============================================================================
+# 3. FOLDER & ARCHIVE ACTIONS
+# ==============================================================================
+def action_folder_clean_zip(target_path):
+    src = Path(target_path).resolve()
+    if not src.exists():
+        return False, f"Target not found: {src}"
+
+    parent = src.parent
+    name = src.name if src.is_dir() else src.stem
+    out_zip = parent / f"{name}_clean.zip"
+
+    excluded = {
+        ".ds_store", "thumbs.db", "desktop.ini", "__pycache__",
+        ".git", ".svn", ".cache", ".tmp", ".orig", ".bak"
+    }
+
+    with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        if src.is_dir():
+            for root, dirs, files in os.walk(src):
+                dirs[:] = [d for d in dirs if d.lower() not in excluded and not d.startswith(".tmp")]
+                for f in files:
+                    if f.lower() in excluded or f.endswith((".pyc", ".tmp", ".bak", "~")):
+                        continue
+                    full_p = os.path.join(root, f)
+                    rel_p = os.path.relpath(full_p, parent)
+                    zf.write(full_p, rel_p)
+        else:
+            zf.write(str(src), src.name)
+
+    return True, str(out_zip)
+
+def action_folder_7z_ultra(target_path):
+    src = Path(target_path).resolve()
+    if not src.exists():
+        return False, f"Target not found: {src}"
+
+    name = src.name if src.is_dir() else src.stem
+    out_7z = src.parent / f"{name}_ultra.7z"
+
+    cmd = [SEVEN_ZIP, "a", "-mx=9", "-mmt=on", str(out_7z), str(src)]
+    res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    return (res.returncode == 0), (str(out_7z) if res.returncode == 0 else res.stderr)
+
+def action_folder_unpack(target_path):
+    src = Path(target_path).resolve()
+    if not src.exists():
+        return False, f"Target not found: {src}"
+
+    if src.is_dir():
+        archives = [f for f in src.iterdir() if f.suffix.lower() in {".zip", ".7z", ".tar", ".gz", ".bz2", ".rar"}]
+        if not archives:
+            return False, f"No archives found in folder: {src.name}"
+        extracted = []
+        for a in archives:
+            out_dest = src / a.stem
+            out_dest.mkdir(exist_ok=True)
+            res = subprocess.run([SEVEN_ZIP, "x", "-y", str(a), f"-o{out_dest}"], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            if res.returncode == 0:
+                extracted.append(a.name)
+        return (len(extracted) > 0), f"Unpacked: {', '.join(extracted)}"
+    else:
+        out_dest = src.parent / src.stem
+        out_dest.mkdir(exist_ok=True)
+        res = subprocess.run([SEVEN_ZIP, "x", "-y", str(src), f"-o{out_dest}"], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        return (res.returncode == 0), (str(out_dest) if res.returncode == 0 else "Extraction failed")
+
+# ==============================================================================
+# DISPATCH TABLE
+# ==============================================================================
+HANDLERS = {
+    # Security
+    "shred": (action_shred, "💀 HAPUS PERMANEN", "File ditimpa 3-pass acak + 0x00 murni (Anti-Forensik)"),
+    
+    # Audio
+    "clean-ai": (action_audio_clean_ai, "🛡️ AI Watermark Stripped", "Audio disanitasi bitexact tanpa jejak AI"),
+    "split-stem": (action_audio_split_stem, "🎤 Stems Separated", "Track vokal dan instrumen dipisahkan"),
+    "mastering": (action_audio_mastering, "🎚️ Broadcast Loudness Normalized", "Audio di-master ke standar -14 LUFS"),
+    "voice-boost": (action_audio_voice_boost, "🎙️ Voice Clarity & De-Noise", "Vokal dipertajam dan noise dibersihkan"),
+    "to-mp3": (action_audio_to_mp3, "⚡ Converted to MP3", "Audio di-transcode ke 320k bitexact MP3"),
+    "midi-render": (action_audio_midi_render, "🎹 MIDI Synthesized", "Partitur MIDI di-render ke 320k MP3 via FluidSynth"),
+    
+    # Image
+    "remove-bg": (action_image_remove_bg, "✂️ Latar Belakang Dihapus", "Gambar diubah ke format PNG transparan"),
+    "upscale": (action_image_upscale, "🔍 AI Upscale 2x Selesai", "Resolusi ditingkatkan 2x dengan filter Lanczos"),
+    "to-webp": (action_image_to_webp, "⚡ Konversi WebP Berhasil", "Format dikonversi ke WebP ringan"),
+    "clean-exif": (action_image_clean_exif, "🛡️ EXIF Metadata Sanitized", "Semua metadata privasi dan GPS dibersihkan"),
+    
+    # Folder & Archive
+    "clean-zip": (action_folder_clean_zip, "🗜️ Clean ZIP Created", "Stripped .DS_Store, cache, dan sampah OS"),
+    "7z-ultra": (action_folder_7z_ultra, "📦 7-Zip Ultra Compressed", "Kompresi LZMA2 rasio maksimal"),
+    "unpack": (action_folder_unpack, "📂 Files Unpacked", "Arsip diekstrak dengan bersih"),
+}
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: flowork-transformer <action> <path1> [path2...]")
+        sys.exit(1)
+
+    action = sys.argv[1].lower()
+    targets = sys.argv[2:]
+
+    if action not in HANDLERS:
+        print(f"Unknown action: {action}. Available: {', '.join(HANDLERS.keys())}")
+        sys.exit(1)
+
+    fn, title, desc = HANDLERS[action]
+    success_count = 0
+    for t in targets:
+        ok, res = fn(t)
+        if ok:
+            success_count += 1
+            print(f"[SUCCESS] {action}: {t} -> {res}")
+            send_notification(title, f"{Path(t).name}\n{desc}")
+        else:
+            print(f"[ERROR] {action} failed on {t}: {res}", file=sys.stderr)
+            send_notification(f"⚠️ {title} Failed", f"{Path(t).name}\n{res}", urgency="critical")
+
+    sys.exit(0 if success_count > 0 else 1)
+
+if __name__ == "__main__":
+    main()

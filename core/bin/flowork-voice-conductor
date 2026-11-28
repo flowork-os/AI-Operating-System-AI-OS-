@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 👑 FLOWORK OS — DUPLEX FULL-VOICE CONDUCTOR (VENV WRAPPER)
+# Universal root: /opt/floworkos
+# ==============================================================================
+VENV_PY="/opt/floworkos/runtime/venvs/voice/bin/python3"
+SCRIPT="/opt/floworkos/engine/personaplex/voice_conductor.py"
+
+if [ -f "$VENV_PY" ] && [ -f "$SCRIPT" ]; then
+    exec "$VENV_PY" "$SCRIPT" "$@"
+else
+    # Fallback to system python
+    exec python3 "$SCRIPT" "$@"
+fi

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Flowork OS — Auto Lyric Transcriber Launcher (Node 04)
+set -eo pipefail
+
+ENGINE="/opt/floworkos/engine/auto_lyric/auto_lyric.py"
+PYTHON="/opt/floworkos/runtime/venvs/voice/bin/python3"
+
+if [[ ! -x "$PYTHON" ]]; then
+    PYTHON="python3"
+fi
+
+exec "$PYTHON" "$ENGINE" "$@"

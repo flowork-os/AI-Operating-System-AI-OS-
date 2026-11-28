@@ -1,0 +1,1338 @@
+@define-color flowork_accent #00ff66;
+@define-color flowork_secondary #00f2fe;
+
+/* --- GLOBAL VIEWS & CONTAINERS (SOLID OPAQUE DARK SURFACE) --- */
+view,
+.view,
+iconview,
+.iconview,
+treeview,
+.treeview,
+textview,
+textview text,
+scrolledwindow,
+scrolledwindow viewport,
+viewport {
+    background-color: #0d1117;
+    background-image: none;
+    color: #e6edf3;
+}
+/* =============================================================================
+ * ⚡ Flowork Sovereign OS — Solid Dark Design System (GTK 3/4)
+ * 100% Bespoke Sovereign Architecture — Zero Transparent App Windows
+ * ============================================================================= */
+
+@define-color flowork_void #0d1117;
+@define-color flowork_glass_surface #161b22;
+@define-color flowork_card #1c2128;
+@define-color flowork_border #30363d;
+@define-color flowork_border_glow rgba(255, 255, 255, 0.40);
+@define-color flowork_cyan #ffffff;
+@define-color flowork_green #ffffff;
+@define-color flowork_text #e6edf3;
+@define-color flowork_text_secondary rgba(230, 237, 243, 0.88);
+@define-color flowork_text_muted rgba(230, 237, 243, 0.65);
+@define-color flowork_crimson #ff2d55;
+@define-color flowork_amber #ffb800;
+
+/* System Selection Colors */
+@define-color theme_selected_bg_color #00ff66;
+@define-color theme_selected_fg_color #000000;
+@define-color selected_bg_color #00ff66;
+@define-color selected_fg_color #000000;
+
+/* --- BASE WINDOW & ROOT --- */
+window,
+window.background,
+.background,
+.csd {
+    background-color: #0d1117;
+    background-image: none;
+    color: @flowork_text;
+    font-family: 'Inter', system-ui, sans-serif;
+    border-radius: 12px;
+}
+
+/* Dialogs & Modal Windows: Solid Opaque Dark Surface */
+dialog,
+messagedialog,
+window.dialog {
+    border-radius: 14px;
+    background-color: #161b22;
+    background-image: none;
+    border: 1px solid #30363d;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* Nemo Desktop must be transparent */
+.nemo-desktop.background,
+.nemo-desktop,
+.nemo-desktop-window,
+.nemo-desktop-window.background,
+nemo-desktop-window,
+NemoDesktopWindow {
+    background-color: transparent;
+    background-image: none;
+}
+
+/* --- HEADERBARS & CLIENT-SIDE DECORATIONS --- */
+headerbar,
+.titlebar {
+    background-color: #161b22;
+    background-image: none;
+    border-bottom: 1px solid #30363d;
+    border-top: 1px solid #30363d;
+    border-radius: 12px 12px 0 0;
+    box-shadow: none;
+    padding: 8px 16px;
+    min-height: 42px;
+    color: @flowork_text;
+}
+
+headerbar:backdrop,
+.titlebar:backdrop {
+    background-color: #12171f;
+    background-image: none;
+    border-bottom: 1px solid #30363d;
+}
+
+headerbar .title {
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 800;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.60);
+}
+
+headerbar .subtitle {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* --- WINDOW CONTROLS: SOVEREIGN OPTICAL CRYSTAL JEWELS --- */
+headerbar button.titlebutton,
+.titlebar button.titlebutton,
+windowcontrols > button {
+    border-radius: 50%;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 0;
+    margin: 0 4px;
+    border: 1px solid rgba(255, 255, 255, 0.40);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.60);
+    color: #ffffff;
+    transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Close Button (Crimson) */
+headerbar button.titlebutton.close,
+.titlebar button.titlebutton.close,
+windowcontrols > button.close {
+    background-color: #ff3b30;
+    border-color: rgba(255, 255, 255, 0.50);
+}
+headerbar button.titlebutton.close:hover,
+.titlebar button.titlebutton.close:hover,
+windowcontrols > button.close:hover {
+    background-color: #ff2d55;
+    box-shadow: 0 0 12px rgba(255, 45, 85, 0.90), inset 0 1px 2px #ffffff;
+}
+headerbar button.titlebutton.close:active,
+.titlebar button.titlebutton.close:active,
+windowcontrols > button.close:active {
+    background-color: #d70015;
+}
+
+/* Minimize / Hide Button (Amber) */
+headerbar button.titlebutton.minimize,
+.titlebar button.titlebutton.minimize,
+windowcontrols > button.minimize {
+    background-color: #ff9500;
+    border-color: rgba(255, 255, 255, 0.50);
+}
+headerbar button.titlebutton.minimize:hover,
+.titlebar button.titlebutton.minimize:hover,
+windowcontrols > button.minimize:hover {
+    background-color: #ffb800;
+    box-shadow: 0 0 12px rgba(255, 184, 0, 0.90), inset 0 1px 2px #ffffff;
+}
+headerbar button.titlebutton.minimize:active,
+.titlebar button.titlebutton.minimize:active,
+windowcontrols > button.minimize:active {
+    background-color: #c97700;
+}
+
+/* Maximize Button (Emerald) */
+headerbar button.titlebutton.maximize,
+.titlebar button.titlebutton.maximize,
+windowcontrols > button.maximize {
+    background-color: #34c759;
+    border-color: rgba(255, 255, 255, 0.50);
+}
+headerbar button.titlebutton.maximize:hover,
+.titlebar button.titlebutton.maximize:hover,
+windowcontrols > button.maximize:hover {
+    background-color: #00ff66;
+    box-shadow: 0 0 12px rgba(0, 255, 102, 0.90), inset 0 1px 2px #ffffff;
+}
+headerbar button.titlebutton.maximize:active,
+.titlebar button.titlebutton.maximize:active,
+windowcontrols > button.maximize:active {
+    background-color: #00b347;
+}
+
+/* Inactive / Backdrop state */
+headerbar button.titlebutton:backdrop,
+.titlebar button.titlebutton:backdrop,
+windowcontrols > button:backdrop {
+    opacity: 0.70;
+}
+
+/* --- BUTTONS: PURE FLUID CAPSULES --- */
+button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 22px;
+    color: @flowork_text;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 18px;
+    transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 6px rgba(0, 0, 0, 0.10);
+}
+
+button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.60);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.40), inset 0 1px 1px rgba(255, 255, 255, 0.60);
+}
+
+button:active,
+button:checked,
+button.flat:active,
+button.flat:checked,
+button.toggle:active,
+button.toggle:checked {
+    background-color: transparent;
+    background-image: linear-gradient(180deg, rgba(0, 255, 102, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(0, 255, 102, 0.85);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.40);
+}
+
+button.suggested-action {
+    background-color: rgba(0, 255, 102, 0.35);
+    background-image: linear-gradient(180deg, rgba(0, 255, 102, 0.40) 0%, rgba(0, 255, 102, 0.15) 100%);
+    color: #ffffff;
+    border-color: #00ff66;
+    font-weight: 800;
+    box-shadow: 0 0 18px rgba(0, 255, 102, 0.60);
+}
+
+button.destructive-action {
+    background: rgba(255, 45, 85, 0.40);
+    border-color: #ff2d55;
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(255, 45, 85, 0.50);
+}
+
+/* --- TEXT ENTRIES & SEARCH BARS: OPTICAL GLASS CAPSULES --- */
+entry {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 26px;
+    color: #ffffff;
+    font-size: 13px;
+    padding: 9px 18px;
+    caret-color: #ffffff;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.20), 0 2px 8px rgba(0, 0, 0, 0.10);
+    transition: all 140ms ease;
+}
+
+entry:focus {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: #ffffff;
+    box-shadow: 0 0 22px rgba(255, 255, 255, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.80);
+}
+
+
+/* =============================================================================
+ * ⚡ NEMO FILE MANAGER — ULTRA-CLEAN PURE OPTICAL CRYSTAL GLASS (NO BUBBLE SLOP)
+ * ============================================================================= */
+window.nemo-window,
+.nemo-window,
+.nemo-window.background {
+    background-color: #121826;
+    background-image: none;
+    border: 1px solid #2a344a;
+    border-radius: 16px;
+    color: #ffffff;
+}
+
+window.nemo-window notebook,
+window.nemo-window notebook stack,
+window.nemo-window .nemo-window-pane,
+window.nemo-window .nemo-window-pane > notebook,
+window.nemo-window .nemo-window-pane scrolledwindow,
+window.nemo-window .nemo-window-pane .view,
+window.nemo-window .nemo-view,
+window.nemo-window .content-view,
+window.nemo-window scrolledwindow,
+window.nemo-window iconview,
+window.nemo-window treeview,
+window.nemo-window .view {
+    background-color: #121826;
+    background-image: none;
+}
+
+window.nemo-window .sidebar,
+.nemo-window.background .sidebar,
+.nemo-places-sidebar,
+.nemo-places-sidebar.frame,
+.nemo-places-sidebar .places-treeview {
+    min-width: 210px;
+    background-color: #0f1420;
+    background-image: none;
+    border-right: 1px solid #232c40;
+    border-left: none;
+    border-top: none;
+    border-bottom: none;
+    border-radius: 28px 0 0 28px;
+    box-shadow: none;
+}
+
+.nemo-window.background .sidebar scrolledwindow,
+.nemo-window.background .sidebar scrolledwindow.frame {
+    background-color: transparent;
+    border: none;
+}
+
+/* Flat, airy, minimalist rows — ZERO BUBBLE SLOP, ZERO OVERLAPPING TILES */
+.nemo-places-sidebar row,
+.nemo-places-sidebar treeview row,
+.nemo-window.background .sidebar row,
+.nemo-window.background .sidebar .view,
+.nemo-window.background .sidebar .view.cell {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 10px;
+    margin: 1px 6px;
+    padding: 5px 8px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.nemo-places-sidebar row:hover,
+.nemo-window.background .sidebar row:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #ffffff;
+}
+
+.nemo-places-sidebar row:selected,
+.nemo-window.background .sidebar row:selected {
+    background-color: rgba(255, 255, 255, 0.16);
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.20), rgba(0, 255, 102, 0.12));
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+paned > separator,
+.nemo-window paned > separator,
+.nemo-window.background paned > separator {
+    background-color: rgba(255, 255, 255, 0.10);
+    background-image: none;
+    border: none;
+    min-width: 1px;
+    margin: 0;
+    padding: 0;
+}
+
+.nemo-window .primary-toolbar,
+.nemo-window .toolbar,
+.nemo-window.background .primary-toolbar {
+    background-color: rgba(255, 255, 255, 0.04);
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 6px 10px;
+}
+
+.nemo-window .primary-toolbar button,
+.nemo-window .primary-toolbar .linked.path-bar > button {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    margin: 0 2px;
+    padding: 4px 10px;
+    color: #ffffff;
+}
+
+.nemo-window .primary-toolbar button:hover,
+.nemo-window .primary-toolbar .linked.path-bar > button:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.40);
+}
+
+.nemo-window .primary-toolbar .linked.path-bar > button:checked,
+.nemo-window .primary-toolbar .linked.path-bar > button:active {
+    background-color: #ffffff;
+    color: #000000;
+    font-weight: bold;
+    border-radius: 18px;
+}
+/* Translucent Panes without GTK CSS parser errors (no) */
+window.nemo-window .nemo-window-pane,
+window.nemo-window .nemo-window-pane > notebook,
+window.nemo-window .nemo-window-pane > notebook stack,
+window.nemo-window .nemo-window-pane scrolledwindow,
+window.nemo-window .nemo-window-pane scrolledwindow.frame,
+window.nemo-window .nemo-window-pane .view,
+window.nemo-window scrolledwindow,
+window.nemo-window scrolledwindow.view,
+window.nemo-window .view {
+    background-color: #121826;
+    background-image: none;
+}
+
+.nemo-canvas-item,
+.nemo-window .view .cell {
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 6px;
+    color: #ffffff;
+    transition: none;
+}
+
+.nemo-canvas-item:hover,
+.nemo-window .view .cell:hover {
+    background-color: #1e293b;
+    background-image: none;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.nemo-canvas-item:selected,
+.nemo-window .view .cell:selected {
+    background-color: #163832;
+    background-image: none;
+    border: 1px solid #00ff8c;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.nemo-window .floating-bar {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-top: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 24px;
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+}
+
+/* --- MENUS, CONTEXT MENUS & POPOVERS --- */
+menu,
+.menu,
+.popup,
+popover.background {
+    background-color: #161b22;
+    background-image: none;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+menuitem,
+.menuitem {
+    border-radius: 18px;
+    padding: 8px 16px;
+    margin: 2px 0;
+    color: @flowork_text_secondary;
+    font-size: 13px;
+    transition: all 120ms ease;
+}
+
+menuitem:hover,
+.menuitem:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+separator {
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.35), transparent);
+    min-height: 1px;
+    margin: 4px 0;
+}
+
+/* --- SCROLLBARS --- */
+scrollbar {
+    background-color: transparent;
+}
+scrollbar slider {
+    background-color: rgba(255, 255, 255, 0.30);
+    border-radius: 20px;
+    min-width: 6px;
+    min-height: 6px;
+    transition: all 150ms ease;
+}
+scrollbar slider:hover {
+    background-color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.70);
+}
+
+/* --- TOOLTIPS --- */
+tooltip,
+tooltip.background {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-top: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 18px;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+}
+
+/* =============================================================================
+ * ⚡ TOP PANEL: PURE CURVED OPTICAL CRYSTAL ISLANDS (ZERO CLUTTER, ZERO OVERLAP)
+ * ============================================================================= */
+.xfce4-panel,
+.xfce4-panel.background,
+window#XfcePanelWindow {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}
+
+.xfce4-panel separator {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* Base buttons inside panel (Tasklist and plugins) */
+.xfce4-panel button {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 18px;
+    color: rgba(255, 255, 255, 0.90);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    min-height: 28px;
+    padding: 2px 14px;
+    margin: 5px 3px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: all 140ms ease;
+}
+
+.xfce4-panel button:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.07) 100%);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+}
+
+.xfce4-panel button:checked,
+.xfce4-panel button:active {
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border: 1px solid rgba(0, 255, 102, 0.70);
+    border-top: 1.5px solid rgba(0, 255, 102, 0.95);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.70);
+}
+
+.xfce4-panel button:checked label,
+.xfce4-panel button:active label {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+/* --- ISLAND 1: Flowork Emblem Pill (Far Left) --- */
+.xfce4-panel #whiskermenu-button,
+.xfce4-panel button#whiskermenu-button {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.65);
+    border-radius: 20px;
+    min-width: 38px;
+    min-height: 30px;
+    padding: 3px 10px;
+    margin: 5px 4px 5px 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.50);
+    transition: all 150ms ease;
+}
+
+.xfce4-panel #whiskermenu-button:hover,
+.xfce4-panel button#whiskermenu-button:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(0, 255, 102, 0.85);
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.45), inset 0 1.5px 1px rgba(255, 255, 255, 0.90);
+}
+
+.xfce4-panel #whiskermenu-button:checked,
+.xfce4-panel #whiskermenu-button:active,
+.xfce4-panel button#whiskermenu-button:checked,
+.xfce4-panel button#whiskermenu-button:active {
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.28) 0%, rgba(255, 255, 255, 0.10) 100%);
+    border-color: #00ff66;
+    box-shadow: 0 0 18px rgba(0, 255, 102, 0.60), inset 0 1.5px 1px #ffffff;
+}
+
+/* --- Open Tasks / Tasklist (Left Cluster) --- */
+tasklist,
+widget.tasklist,
+.tasklist,
+.xfce4-panel .tasklist,
+.xfce4-panel widget.tasklist {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}
+
+tasklist button,
+tasklist button.flat,
+tasklist button.toggle,
+widget.tasklist > button.toggle,
+.xfce4-panel .tasklist button,
+.xfce4-panel widget.tasklist > button.toggle {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 18px;
+    color: rgba(255, 255, 255, 0.90);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    min-height: 28px;
+    padding: 2px 14px;
+    margin: 5px 3px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transition: all 140ms ease;
+}
+
+tasklist button:hover,
+tasklist button.flat:hover,
+tasklist button.toggle:hover,
+widget.tasklist > button.toggle:hover,
+.xfce4-panel .tasklist button:hover,
+.xfce4-panel widget.tasklist > button.toggle:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.07) 100%);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+}
+
+tasklist button:checked,
+tasklist button:active,
+tasklist button.flat:checked,
+tasklist button.flat:active,
+tasklist button.toggle:checked,
+tasklist button.toggle:active,
+widget.tasklist > button.toggle:checked,
+widget.tasklist > button.toggle:active,
+.xfce4-panel .tasklist button:checked,
+.xfce4-panel .tasklist button:active,
+.xfce4-panel widget.tasklist > button.toggle:checked,
+.xfce4-panel widget.tasklist > button.toggle:active {
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border: 1px solid rgba(0, 255, 102, 0.70);
+    border-top: 1.5px solid rgba(0, 255, 102, 0.95);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.70);
+}
+
+tasklist button label,
+tasklist button:checked label,
+tasklist button:active label,
+tasklist button.flat label,
+tasklist button.toggle label,
+widget.tasklist > button.toggle label,
+.xfce4-panel .tasklist button label,
+.xfce4-panel widget.tasklist > button.toggle label {
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: inherit;
+    padding-left: 4px;
+}
+
+/* --- Chrome-like Window Close Button in Tasklist --- */
+.tasklist-close-btn,
+tasklist button button.tasklist-close-btn,
+.xfce4-panel .tasklist button button.tasklist-close-btn {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 50%;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 1px;
+    margin: 0 0 0 5px;
+    color: rgba(255, 255, 255, 0.65);
+    opacity: 0.70;
+    transition: all 120ms ease;
+}
+
+.tasklist-close-btn:hover,
+tasklist button button.tasklist-close-btn:hover,
+.xfce4-panel .tasklist button button.tasklist-close-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border: none;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.40);
+    color: #ffffff;
+    opacity: 1.0;
+}
+
+.tasklist-close-btn:active,
+tasklist button button.tasklist-close-btn:active,
+.xfce4-panel .tasklist button button.tasklist-close-btn:active {
+    background: rgba(255, 50, 50, 0.75);
+    color: #ffffff;
+}
+
+.tasklist-close-btn image,
+tasklist button button.tasklist-close-btn image,
+.xfce4-panel .tasklist button button.tasklist-close-btn image {
+    padding: 0;
+    margin: 0;
+    color: inherit;
+}
+
+/* --- ISLAND 2: Center Temporal Nexus / Clock Pill --- */
+.xfce4-panel #clock-button,
+.xfce4-panel button#clock-button,
+.xfce4-panel .clock button {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.65);
+    border-radius: 20px;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', 'Inter', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    min-height: 28px;
+    padding: 3px 22px;
+    margin: 5px 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    transition: all 150ms ease;
+}
+
+.xfce4-panel #clock-button:hover,
+.xfce4-panel button#clock-button:hover,
+.xfce4-panel .clock button:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(0, 255, 102, 0.85);
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.40), inset 0 1px 0 #ffffff;
+}
+
+/* --- ISLAND 3: Right Cluster (Launchers, PulseAudio & Systray) --- */
+.xfce4-panel .launcher,
+.xfce4-panel .launcher button {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px 4px;
+    margin: 5px 1px;
+    border-radius: 14px;
+    color: #ffffff;
+    transition: all 140ms ease;
+}
+
+.xfce4-panel .launcher button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.35);
+}
+
+.xfce4-panel #pulseaudio-button,
+.xfce4-panel button#pulseaudio-button {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.65);
+    border-radius: 18px;
+    min-width: 32px;
+    min-height: 28px;
+    padding: 3px 8px;
+    margin: 5px 3px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.40);
+    transition: all 140ms ease;
+}
+
+.xfce4-panel #pulseaudio-button:hover,
+.xfce4-panel button#pulseaudio-button:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(0, 255, 102, 0.80);
+    box-shadow: 0 0 14px rgba(0, 255, 102, 0.40);
+}
+
+/* Unified Systray Glass Capsule */
+wrapper-2.0,
+.wrapper-2.0 {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+}
+
+.systray,
+#systray-8,
+.xfce4-panel .systray,
+panel-toplevel .systray {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.65);
+    border-radius: 20px;
+    min-height: 28px;
+    padding: 3px 10px;
+    margin: 5px 12px 5px 3px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+/* Ensure tray buttons/icons inside systray NEVER get fat button styling or overlapping borders */
+.systray button,
+.systray button.flat,
+.systray widget,
+.systray image,
+.systray box,
+.xfce4-panel .systray button,
+.xfce4-panel .systray widget {
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    padding: 1px 3px;
+    margin: 0 1px;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 8px;
+}
+
+.systray button:hover,
+.systray widget:hover,
+.xfce4-panel .systray button:hover,
+.xfce4-panel .systray widget:hover {
+    background: rgba(255, 255, 255, 0.16);
+    background-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 0 8px rgba(0, 255, 102, 0.30);
+}
+
+.systray button:checked,
+.systray button:active {
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* --- WHISKER MENU: SOLID OPAQUE DECK --- */
+#whiskermenu-window {
+    background-color: #121826;
+    background-image: none;
+    border: 1px solid #2a344a;
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    padding: 14px 18px;
+    color: #ffffff;
+}
+
+#whiskermenu-window entry {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 22px;
+    color: #ffffff;
+    font-size: 13.5px;
+    padding: 9px 18px;
+    margin: 4px;
+    caret-color: #ffffff;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.20), 0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+#whiskermenu-window entry:focus {
+    background-color: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.50);
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.60);
+}
+
+/* Category buttons (Left column) - Zero overlap, airy transparent spacing */
+#whiskermenu-window button {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 12px;
+    margin: 1px 2px;
+    transition: all 120ms ease;
+}
+
+#whiskermenu-window button:hover {
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+    border-radius: 12px;
+}
+
+#whiskermenu-window button:checked,
+#whiskermenu-window button:active {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.20) 0%, rgba(0, 255, 140, 0.10) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-top: 1px solid rgba(255, 255, 255, 0.50);
+    border-radius: 12px;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+/* Applications Treeview (Right column) - Generous row spacing, zero collision */
+#whiskermenu-window treeview {
+    background-color: #0f1420;
+    background-image: none;
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 13px;
+    padding: 4px;
+}
+
+#whiskermenu-window treeview:hover,
+#whiskermenu-window treeview:selected {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 14px;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+}
+
+#whiskermenu-window image,
+treeview image {
+    color: #ffffff;
+}
+
+/* --- SWITCHES & TOGGLES --- */
+switch {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 24px;
+    min-width: 48px;
+    min-height: 24px;
+}
+
+switch:checked {
+    background: #ffffff;
+    border-color: #ffffff;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.60);
+}
+
+switch slider {
+    background: #ffffff;
+    border-radius: 50%;
+    min-width: 20px;
+    min-height: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.30);
+}
+
+/* --- GTK SCALE / SLIDERS --- */
+scale {
+    min-height: 26px;
+    min-width: 120px;
+    padding: 4px 8px;
+}
+
+scale trough {
+    background-color: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
+    min-height: 8px;
+}
+
+scale highlight {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.60);
+}
+
+scale slider {
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 50%;
+    min-width: 18px;
+    min-height: 18px;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.70);
+}
+
+/* --- NOTIFICATIONS (XFCE4-NOTIFYD / NOTIFY-OSD) --- */
+#XfceNotifyWindow {
+    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.09) 0%, rgba(240, 245, 255, 0.02) 50%, rgba(255, 255, 255, 0.06) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.80);
+    border-left: 1.5px solid rgba(255, 255, 255, 0.50);
+    border-radius: 28px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.70);
+    padding: 14px 18px;
+    color: #ffffff;
+}
+
+#XfceNotifyWindow #summary {
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+#XfceNotifyWindow #body {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 12px;
+}
+
+#XfceNotifyWindow button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-top: 1px solid rgba(255, 255, 255, 0.50);
+    border-radius: 18px;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 4px 12px;
+}
+
+infobar {
+    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.09) 0%, rgba(240, 245, 255, 0.02) 50%, rgba(255, 255, 255, 0.06) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-top: 1px solid rgba(255, 255, 255, 0.60);
+    border-radius: 20px;
+    color: #ffffff;
+}
+
+/* --- SOLID DARK OVERRIDE FOR FILE CHOOSER & DIALOGS (BROWSER UPLOAD / SAVE) --- */
+dialog,
+messagedialog,
+window.dialog,
+window.dialog.background,
+filechooser,
+window.filechooser,
+dialog.filechooser {
+    background-color: #0f141c;
+    background-image: none;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+}
+
+dialog headerbar,
+window.dialog headerbar,
+filechooser headerbar,
+dialog .titlebar,
+window.dialog .titlebar {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border-bottom: 1px solid #30363d;
+    border-radius: 12px 12px 0 0;
+}
+
+filechooser placessidebar,
+filechooser placessidebar list,
+filechooser placessidebar row,
+dialog placessidebar,
+dialog placessidebar list {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+}
+
+filechooser placessidebar row:selected,
+filechooser placessidebar row:selected:focus {
+    background-color: rgba(0, 255, 102, 0.18);
+    color: #00ff66;
+}
+
+filechooser treeview,
+filechooser treeview.view,
+filechooser .view,
+filechooser iconview,
+filechooser scrolledwindow,
+filechooser viewport,
+filechooser list,
+dialog treeview,
+dialog .view,
+dialog scrolledwindow,
+dialog viewport,
+dialog list {
+    background-color: #0d1117;
+    background-image: none;
+    color: #e6edf3;
+}
+
+filechooser treeview.view:selected,
+filechooser treeview.view:selected:focus,
+filechooser .view:selected,
+filechooser list row:selected {
+    background-color: rgba(0, 255, 102, 0.22);
+    color: #ffffff;
+}
+
+filechooser actionbar,
+filechooser .path-bar,
+dialog actionbar,
+dialog .dialog-action-box {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border-top: 1px solid #30363d;
+}
+
+filechooser entry,
+dialog entry {
+    background-color: #0d1117;
+    background-image: none;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+}
+
+filechooser button,
+dialog button {
+    background-color: #21262d;
+    background-image: none;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+}
+
+filechooser button:hover,
+dialog button:hover {
+    background-color: #30363d;
+    border-color: #00ff66;
+}
+
+filechooser button.suggested-action,
+dialog button.suggested-action {
+    background-color: #00cc52;
+    color: #000000;
+    font-weight: 700;
+    border-color: #00ff66;
+}
+
+filechooser popover,
+dialog popover {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+}
+
+/* --- SOLID DARK OVERRIDE FOR DOCUMENT VIEWER (EVINCE) --- */
+ev-window,
+ev-window.background,
+ev-window.csd,
+.ev-window,
+.ev-window.background,
+.ev-window.csd,
+#ev-window,
+#ev-window.background,
+#ev-window.csd,
+window.ev-window,
+window#ev-window,
+evince-window,
+.evince-window,
+window.evince-window,
+window.evince-window.background,
+window.evince-window.csd {
+    background-color: #0d1117;
+    background-image: none;
+    color: #e6edf3;
+}
+
+ev-window headerbar,
+ev-window headerbar:backdrop,
+ev-window .titlebar,
+ev-window .titlebar:backdrop,
+.ev-window headerbar,
+.ev-window headerbar:backdrop,
+.ev-window .titlebar,
+.ev-window .titlebar:backdrop,
+#ev-window headerbar,
+#ev-window headerbar:backdrop,
+#ev-window .titlebar,
+#ev-window .titlebar:backdrop,
+.evince-window headerbar,
+.evince-window .titlebar {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border-bottom: 1px solid #30363d;
+}
+
+ev-window scrolledwindow,
+ev-window scrolledwindow viewport,
+ev-window viewport,
+ev-window paned,
+ev-window stack,
+ev-window box,
+.ev-window scrolledwindow,
+.ev-window scrolledwindow viewport,
+.ev-window viewport,
+.ev-window paned,
+.ev-window stack,
+#ev-window scrolledwindow,
+#ev-window scrolledwindow viewport,
+#ev-window viewport,
+#ev-window paned,
+#ev-window stack,
+.evince-window scrolledwindow,
+.evince-window scrolledwindow viewport,
+.evince-window viewport,
+.evince-window paned,
+.evince-window stack {
+    background-color: #0d1117;
+    background-image: none;
+}
+
+ev-window evview,
+ev-window .content-view,
+ev-window evsidebar,
+ev-window .sidebar,
+ev-window iconview,
+ev-window treeview,
+.ev-window evview,
+.ev-window .content-view,
+.ev-window evsidebar,
+.ev-window .sidebar,
+.ev-window iconview,
+.ev-window treeview,
+#ev-window evview,
+#ev-window .content-view,
+#ev-window evsidebar,
+#ev-window .sidebar,
+#ev-window iconview,
+#ev-window treeview,
+.evince-window evview,
+.evince-window .content-view,
+.evince-window evsidebar,
+.evince-window .sidebar,
+.evince-window iconview,
+.evince-window treeview {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+}
+
+evview.document-page,
+ev-window evview.document-page,
+.ev-window evview.document-page,
+#ev-window evview.document-page,
+.evince-window evview.document-page {
+    background-color: #ffffff;
+}
+
+evview.document-page.inverted,
+ev-window evview.document-page.inverted,
+.ev-window evview.document-page.inverted,
+#ev-window evview.document-page.inverted,
+.evince-window evview.document-page.inverted {
+    background-color: #000000;
+}
+
+ev-window popover,
+ev-window menu,
+.ev-window popover,
+.ev-window menu,
+#ev-window popover,
+#ev-window menu,
+.evince-window popover,
+.evince-window menu {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+}
+
+/* --- UNIVERSAL SOLID OPAQUE APP SURFACES (AUDACITY, THUNAR, SETTINGS, ALL GTK3/WX APPS) --- */
+notebook,
+notebook > stack,
+notebook > header,
+paned,
+stack,
+toolbar,
+.toolbar,
+.primary-toolbar,
+menubar,
+.menubar,
+statusbar,
+frame,
+frame > border,
+box.view,
+list,
+row,
+tooltip,
+tooltip.background,
+window.popup {
+    background-color: #0d1117;
+    background-image: none;
+    color: #e6edf3;
+}
+
+notebook > header,
+toolbar,
+.toolbar,
+.primary-toolbar,
+menubar,
+.menubar,
+statusbar,
+tooltip,
+tooltip.background {
+    background-color: #161b22;
+    border-color: #30363d;
+}
+
+entry,
+spinbutton,
+combobox > box > button.combo {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+}
+
+/* Preserve transparent desktop wallpaper & icons */
+.nemo-desktop.background,
+.nemo-desktop,
+.nemo-desktop-window,
+.nemo-desktop-window.background,
+nemo-desktop-window,
+NemoDesktopWindow,
+.nemo-desktop-window scrolledwindow,
+.nemo-desktop-window viewport,
+.nemo-desktop-window .view,
+XfdesktopIconView {
+    background-color: transparent;
+    background-image: none;
+}

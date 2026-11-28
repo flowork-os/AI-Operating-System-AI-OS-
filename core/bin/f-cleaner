@@ -1,0 +1,698 @@
+#!/usr/bin/env python3
+"""
+Flowork OS — F-Cleaner (Unified Headless Anti-Forensic & Disk Hygiene Engine)
+Merges Anti-Forensic Nitro Purge and DiskCraft into a single headless one-click utility.
+Resides in /opt/floworkos/bin/ (core OS utility, never inside /opt/floworkos/apps/).
+"""
+
+import argparse
+import glob
+import json
+import os
+import shutil
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+STRICT_PROTECTED_PATHS = {
+    "/", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/usr/bin", "/usr/sbin",
+    "/usr/lib", "/boot", "/dev", "/proc", "/sys", "/etc", "/root",
+    "/swapfile",
+    "/opt/floworkos/connector", "/opt/floworkos/connector/bin",
+    "/opt/floworkos/kernel.rs", "/opt/floworkos/system", "/opt/floworkos/bin",
+    "/opt/floworkos/policies", "/opt/floworkos/theme", "/opt/floworkos/session",
+    "/opt/floworkos/apps",
+}
+
+SFX_SUB_HIT = "/opt/floworkos/theme/sounds/sub_hit.wav"
+
+
+def is_path_safe_to_clean(target_path: str) -> bool:
+    """Ensure path is not a critical system directory or symlink escape."""
+    try:
+        if os.path.islink(target_path):
+            return False
+        resolved = os.path.realpath(target_path)
+        if resolved in STRICT_PROTECTED_PATHS:
+            return False
+        if resolved.startswith("/dev/shm"):
+            return True
+        for prot in ("/bin", "/sbin", "/lib", "/lib64", "/usr", "/boot", "/dev", "/proc", "/sys", "/etc"):
+            if resolved == prot or resolved.startswith(prot + "/"):
+                return False
+        if resolved == "/opt/floworkos" or resolved == os.path.expanduser("~"):
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def get_avail_mem_mb() -> int:
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) // 1024
+    except Exception:
+        pass
+    return 0
+
+
+def play_sfx(path: str) -> None:
+    try:
+        if os.path.exists(path):
+            subprocess.Popen(
+                ["paplay", path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    except Exception:
+        pass
+
+
+def shred_file(filepath: str, dry_run: bool = False) -> int:
+    """Anti-forensic single-pass zero-fill (0x00) overwrite before unlink."""
+    if not is_path_safe_to_clean(filepath):
+        return 0
+    try:
+        if not os.path.isfile(filepath) or os.path.islink(filepath):
+            return 0
+        size = os.path.getsize(filepath)
+        if dry_run:
+            return size
+        if 0 < size <= 64 * 1024 * 1024:
+            try:
+                with open(filepath, "r+b") as f:
+                    chunk = b"\x00" * min(size, 65536)
+                    rem = size
+                    while rem > 0:
+                        w = min(rem, len(chunk))
+                        f.write(chunk[:w])
+                        rem -= w
+                    f.flush()
+                    os.fsync(f.fileno())
+            except Exception:
+                pass
+        os.unlink(filepath)
+        return size
+    except Exception:
+        return 0
+
+
+def clean_dir_contents(dir_path: str, skip_locks: bool = True, max_age_hours: float = 0.0,
+                       shred: bool = False, dry_run: bool = False) -> tuple[int, int]:
+    """Safely clean contents inside a directory without deleting the directory itself."""
+    if not os.path.isdir(dir_path) or not is_path_safe_to_clean(dir_path):
+        return 0, 0
+    freed = 0
+    count = 0
+    now = time.time()
+    cutoff = now - (max_age_hours * 3600.0) if max_age_hours > 0 else None
+    try:
+        with os.scandir(dir_path) as it:
+            for entry in it:
+                try:
+                    if entry.is_symlink():
+                        continue
+                    name = entry.name
+                    if skip_locks and (name == "lock" or name.endswith(".lock") or name.endswith(".pid")):
+                        continue
+                    st = entry.stat(follow_symlinks=False)
+                    if cutoff is not None and st.st_mtime > cutoff:
+                        continue
+                    if entry.is_file(follow_symlinks=False):
+                        if shred:
+                            freed += shred_file(entry.path, dry_run=dry_run)
+                        else:
+                            if not dry_run:
+                                os.unlink(entry.path)
+                            freed += st.st_size
+                        count += 1
+                    elif entry.is_dir(follow_symlinks=False):
+                        sub_freed, sub_count = _dir_size_and_count(entry.path)
+                        if not dry_run:
+                            if shred:
+                                _shred_tree(entry.path)
+                            else:
+                                shutil.rmtree(entry.path, ignore_errors=True)
+                        freed += sub_freed
+                        count += max(1, sub_count)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return freed, count
+
+
+def _dir_size_and_count(root_path: str) -> tuple[int, int]:
+    total = 0
+    cnt = 0
+    stack = [root_path]
+    while stack:
+        curr = stack.pop()
+        try:
+            with os.scandir(curr) as it:
+                for entry in it:
+                    try:
+                        if entry.is_symlink():
+                            continue
+                        if entry.is_file(follow_symlinks=False):
+                            total += entry.stat(follow_symlinks=False).st_size
+                            cnt += 1
+                        elif entry.is_dir(follow_symlinks=False):
+                            stack.append(entry.path)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    return total, cnt
+
+
+def _shred_tree(root_path: str) -> None:
+    if not is_path_safe_to_clean(root_path):
+        return
+    for dirpath, _, filenames in os.walk(root_path, topdown=False):
+        for fn in filenames:
+            shred_file(os.path.join(dirpath, fn), dry_run=False)
+        try:
+            if dirpath != root_path:
+                os.rmdir(dirpath)
+        except Exception:
+            pass
+    shutil.rmtree(root_path, ignore_errors=True)
+
+
+def sanitize_clipboard(dry_run: bool = False) -> bool:
+    if dry_run:
+        return True
+    try:
+        if os.path.exists("/usr/bin/xclip"):
+            subprocess.run(["/usr/bin/xclip", "-selection", "clipboard", "-i"], input=b"", timeout=2, check=False)
+            subprocess.run(["/usr/bin/xclip", "-selection", "primary", "-i"], input=b"", timeout=2, check=False)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def drop_kernel_caches(dry_run: bool = False) -> bool:
+    if dry_run:
+        return True
+    try:
+        subprocess.run(["sync"], timeout=5, check=False)
+        subprocess.run(
+            ["sudo", "-n", "tee", "/proc/sys/vm/drop_caches"],
+            input=b"3\n",
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+            check=False,
+        )
+        subprocess.run(
+            ["sudo", "-n", "tee", "/proc/sys/vm/compact_memory"],
+            input=b"1\n",
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+            check=False,
+        )
+        return True
+    except Exception:
+        return False
+
+
+def vacuum_journal(mode: str = "one-click", dry_run: bool = False) -> None:
+    if dry_run:
+        return
+    try:
+        arg = "--vacuum-time=1s" if mode == "one-click" else "--vacuum-size=100M"
+        subprocess.run(
+            ["sudo", "-n", "journalctl", arg],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        pass
+
+
+def trigger_bg_trim(dry_run: bool = False) -> None:
+    if dry_run:
+        return
+    try:
+        subprocess.Popen(
+            ["sudo", "-n", "fstrim", "-av"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
+
+
+def clean_orphaned_app_configs(dry_run: bool = False) -> tuple[int, int]:
+    """Remove orphaned ~/.config/<app> folders for uninstalled apps (from DiskCraft)."""
+    freed = 0
+    count = 0
+    apps_dir = "/opt/floworkos/apps"
+    installed = set()
+    if os.path.isdir(apps_dir):
+        try:
+            installed = {e.name.lower() for e in os.scandir(apps_dir) if e.is_dir()}
+        except Exception:
+            pass
+    cfg_dir = os.path.expanduser("~/.config")
+    protected_cfg = {
+        "xfce4", "gtk-3.0", "gtk-4.0", "systemd", "autostart", "pulse", "pipewire",
+        "dconf", "fontconfig", "mimeapps.list", "user-dirs.dirs", "flowork", "mrflow",
+        "google-chrome", "chromium", "code", "Code", "nemo", "picom", "menus",
+    }
+    if os.path.isdir(cfg_dir):
+        try:
+            for entry in os.scandir(cfg_dir):
+                if not entry.is_dir(follow_symlinks=False):
+                    continue
+                name_l = entry.name.lower()
+                if entry.name in protected_cfg or name_l in protected_cfg:
+                    continue
+                if name_l.startswith("flowork-") and name_l not in installed:
+                    # Only clean known uninstalled app configs, never core flowork configs
+                    if name_l in ("flowork-diskcraft", "diskcraft"):
+                        sz, cnt = _dir_size_and_count(entry.path)
+                        if not dry_run:
+                            shutil.rmtree(entry.path, ignore_errors=True)
+                        freed += sz
+                        count += max(1, cnt)
+        except Exception:
+            pass
+    return freed, count
+
+
+def _force_shred_tree(root_path: str) -> None:
+    """Recursively shred files, unlink symlinks, and remove read-only directories."""
+    if os.path.islink(root_path):
+        try:
+            os.unlink(root_path)
+        except Exception:
+            pass
+        return
+    try:
+        os.chmod(root_path, 0o700)
+    except Exception:
+        pass
+    for dirpath, dirnames, filenames in os.walk(root_path, topdown=False, followlinks=False):
+        for fn in filenames:
+            fp = os.path.join(dirpath, fn)
+            try:
+                if os.path.islink(fp):
+                    os.unlink(fp)
+                else:
+                    try:
+                        os.chmod(fp, 0o600)
+                    except Exception:
+                        pass
+                    shred_file(fp, dry_run=False)
+            except Exception:
+                try:
+                    os.unlink(fp)
+                except Exception:
+                    pass
+        for dn in dirnames:
+            dp = os.path.join(dirpath, dn)
+            try:
+                if os.path.islink(dp):
+                    os.unlink(dp)
+                else:
+                    try:
+                        os.chmod(dp, 0o700)
+                    except Exception:
+                        pass
+                    os.rmdir(dp)
+            except Exception:
+                pass
+    try:
+        shutil.rmtree(root_path, ignore_errors=True)
+    except Exception:
+        pass
+
+
+def clean_trash_locations(home: str, uid: int, dry_run: bool = False) -> tuple[int, int]:
+    """Thoroughly empty XDG Trash (files, info, expunged, dotfiles, symlinks, read-only) and mount .Trash-<uid>."""
+    freed = 0
+    count = 0
+    trash_roots: list[str] = []
+    seen: set[str] = set()
+
+    def _add_root(p: str) -> None:
+        if not p:
+            return
+        rp = os.path.realpath(p)
+        if rp not in seen and os.path.isdir(rp) and not os.path.islink(p):
+            seen.add(rp)
+            trash_roots.append(rp)
+
+    _add_root(os.path.join(home, ".local/share/Trash"))
+    xdg_data = os.environ.get("XDG_DATA_HOME", "").strip()
+    if xdg_data:
+        _add_root(os.path.join(xdg_data, "Trash"))
+
+    for mount_glob in (
+        f"/mnt/*/.Trash-{uid}",
+        f"/mnt/*/.Trash/{uid}",
+        f"/media/*/.Trash-{uid}",
+        f"/media/*/*/.Trash-{uid}",
+        f"/run/media/*/*/.Trash-{uid}",
+    ):
+        for mp in glob.glob(mount_glob):
+            _add_root(mp)
+
+    for root in trash_roots:
+        for sub in ("files", "info", "expunged"):
+            subdir = os.path.join(root, sub)
+            if not os.path.isdir(subdir) or os.path.islink(subdir):
+                continue
+            try:
+                with os.scandir(subdir) as it:
+                    for entry in it:
+                        try:
+                            if entry.is_symlink():
+                                count += 1
+                                if not dry_run:
+                                    os.unlink(entry.path)
+                            elif entry.is_file(follow_symlinks=False):
+                                sz = entry.stat(follow_symlinks=False).st_size
+                                freed += sz
+                                count += 1
+                                if not dry_run:
+                                    try:
+                                        os.chmod(entry.path, 0o600)
+                                    except Exception:
+                                        pass
+                                    shred_file(entry.path, dry_run=False)
+                            elif entry.is_dir(follow_symlinks=False):
+                                sz, cnt = _dir_size_and_count(entry.path)
+                                freed += sz
+                                count += max(1, cnt)
+                                if not dry_run:
+                                    _force_shred_tree(entry.path)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        dirsizes = os.path.join(root, "directorysizes")
+        if os.path.isfile(dirsizes) and not os.path.islink(dirsizes):
+            try:
+                freed += os.path.getsize(dirsizes)
+                count += 1
+                if not dry_run:
+                    os.unlink(dirsizes)
+            except Exception:
+                pass
+
+    if not dry_run and shutil.which("gio"):
+        try:
+            subprocess.run(
+                ["gio", "trash", "--empty"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+            )
+        except Exception:
+            pass
+
+    return freed, count
+
+
+def run_f_cleaner(mode: str = "one-click", dry_run: bool = False) -> dict:
+    t0 = time.time()
+    mem_before = get_avail_mem_mb()
+    home = os.path.expanduser("~")
+    uid = os.getuid()
+    total_freed = 0
+    total_items = 0
+
+    # 1. Anti-Forensic Zero-Fill & Shred Ephemeral Spools, Prompts, Thumbnails, Recent, Trash & ALL 7+ Node Caches
+    shred_globs = [
+        # Audio / Voice Daemons
+        "/tmp/flowork_voice_*",
+        "/dev/shm/flowork_voice_*",
+        f"/run/user/{uid}/flowork-voice-spool/*",
+        "/dev/shm/flowork-voice-spool/*",
+        "/tmp/flowork_say_*",
+        "/tmp/flowork_conductor_*",
+        "/tmp/piper_live_*",
+        # Node 01: Vocal Focus Master (vocal_master)
+        "/tmp/flowork_vocal_*",
+        "/tmp/vocal_focus_*",
+        "/tmp/vocal_master_*",
+        "/dev/shm/vocal_*",
+        "/dev/shm/vocal_master_*",
+        # Node 02: Stem Separator (stem_split / demucs / audio-separator)
+        "/tmp/flowork_stem_*",
+        "/tmp/stem_split_*",
+        "/dev/shm/stem_*",
+        "/tmp/*audio_separator*",
+        "/tmp/*demucs*",
+        os.path.join(home, ".cache/audio-separator/*"),
+        os.path.join(home, ".cache/demucs/*"),
+        # Node 03: Suno 59s Speed-up (suno_59s)
+        "/tmp/flowork_suno_59s_*",
+        "/tmp/suno_59s_*",
+        "/dev/shm/suno_59s_*",
+        "/tmp/*_59s.mp3",
+        "/tmp/*_59s.wav",
+        # Node 04: AI Title Generator (title_generator)
+        "/tmp/title_gen_*",
+        "/tmp/flowork_title_*",
+        "/tmp/*viral_titles*",
+        # Node 05: Background Remover (bg_remove / rembg)
+        "/tmp/bg_remove_*",
+        "/tmp/rembg_*",
+        "/tmp/*nobg*",
+        "/dev/shm/bg_remove_*",
+        "/dev/shm/rembg_*",
+        os.path.join(home, ".u2net/*"),
+        os.path.join(home, ".rembg/*"),
+        # Node 06: Suno Cover Studio (suno_cover)
+        "/tmp/flowork_suno_cover_*",
+        "/tmp/suno_cover_*",
+        "/dev/shm/suno_cover_*",
+        "/tmp/*cover_split*",
+        "/tmp/suno_cover_*.png",
+        # Node 07: 4K UHD Render Studio (renderer_4k)
+        "/tmp/flowork_4k_*",
+        "/tmp/4k_render_*",
+        "/tmp/test_4k*",
+        "/dev/shm/flowork_4k_*",
+        "/dev/shm/4k_render_*",
+        "/tmp/*_4k_work*",
+        "/tmp/*4k_preview*",
+        "/tmp/ffmpeg_4k_*",
+        "/opt/floworkos/engine/renderer_4k/work/*",
+        # General Numba / PyJIT & System Ephemeral
+        "/tmp/flowork_numba_cache",
+        "/tmp/flowork_prompt_*",
+        "/tmp/mrflow_*",
+        # Node 08 & Desktop System (Nemo / XDG / Trash / Thumbnails)
+        os.path.join(home, ".cache/thumbnails/*/*"),
+        os.path.join(home, ".cache/thumbnails/*"),
+        os.path.join(home, ".local/share/recently-used.xbel"),
+        os.path.join(home, ".local/share/Trash/*/*"),
+        os.path.join(home, ".local/share/Trash/*"),
+        # Screenshots & Visual Captures (Empirical Evidence & Snips Purge)
+        os.path.join(home, "Pictures/Screenshots/*"),
+        "/opt/floworkos/screenshots/*.png",
+        "/opt/floworkos/screenshots/*.jpg",
+        "/opt/floworkos/screenshots/*.jpeg",
+        "/opt/floworkos/screenshots/*.webp",
+        "/opt/floworkos/screenshots/thumbs/*",
+        "/dev/shm/flowork_apk_screen.png",
+        "/dev/shm/*screenshot*.png",
+        "/tmp/*screenshot*.png",
+    ]
+
+    for pat in shred_globs:
+        for target in glob.glob(pat):
+            if not is_path_safe_to_clean(target):
+                continue
+            base = os.path.basename(target)
+            if base in (".gitkeep", ".gitignore", "README.md"):
+                continue
+            if os.path.isfile(target) and not os.path.islink(target):
+                total_freed += shred_file(target, dry_run=dry_run)
+                total_items += 1
+            elif os.path.isdir(target) and not os.path.islink(target):
+                sz, cnt = _dir_size_and_count(target)
+                if not dry_run:
+                    _shred_tree(target)
+                total_freed += sz
+                total_items += max(1, cnt)
+
+    # 1b. Thorough Trash Wipe (files, info, expunged, dotfiles, symlinks, read-only, mounts, gio)
+    t_sz, t_cnt = clean_trash_locations(home, uid, dry_run=dry_run)
+    total_freed += t_sz
+    total_items += t_cnt
+
+    # 2. DiskCraft Hygiene Rules (Caches, Logs, Dev Artifacts, Pipeline Scratch, /tmp)
+    cache_dirs = [
+        os.path.join(home, ".cache/pip"),
+        os.path.join(home, ".cache/uv"),
+        os.path.join(home, ".npm/_cacache"),
+        os.path.join(home, ".cargo/registry/cache"),
+        os.path.join(home, ".cargo/git/db"),
+        os.path.join(home, ".cache/google-chrome/Default/Cache"),
+        os.path.join(home, ".cache/google-chrome/Default/Code Cache"),
+        os.path.join(home, ".cache/chromium/Default/Cache"),
+        os.path.join(home, ".cache/mozilla/firefox"),
+        os.path.join(home, ".cache/camoufox"),
+        os.path.join(home, ".cache/flowork-stealth"),
+        os.path.join(home, ".flowork/tmp"),
+        os.path.join(home, ".cache/numba"),
+        os.path.join(home, ".numba_cache"),
+        os.path.join(home, ".rembg"),
+        os.path.join(home, ".u2net"),
+        os.path.join(home, ".cache/huggingface"),
+        os.path.join(home, ".cache/torch"),
+        os.path.join(home, ".cache/onnxruntime"),
+        os.path.join(home, ".cache/flowork/forex_calendar"),
+        "/tmp/flowork_forex_calendar_cache.json",
+        "/opt/floworkos/engine/vocal_master/__pycache__",
+        "/opt/floworkos/engine/stem_split/__pycache__",
+        "/opt/floworkos/engine/suno_59s/__pycache__",
+        "/opt/floworkos/engine/title_generator/__pycache__",
+        "/opt/floworkos/engine/bg_remove/__pycache__",
+        "/opt/floworkos/engine/suno_cover/__pycache__",
+        "/opt/floworkos/engine/renderer_4k/__pycache__",
+        "/opt/floworkos/engine/renderer_4k/work",
+        "/opt/floworkos/engine/auto_lyric/__pycache__",
+        "/opt/floworkos/engine/personaplex/__pycache__",
+        "/opt/floworkos/engine/seo_intelligence/__pycache__",
+        "/opt/floworkos/engine/digital_clock/__pycache__",
+        "/opt/floworkos/engine/tarot_oracle/__pycache__",
+        "/opt/floworkos/engine/orbital_reactor/__pycache__",
+        "/opt/floworkos/engine/chrono_sentinel/__pycache__",
+        "/opt/floworkos/engine/forex_calendar/__pycache__",
+    ]
+    if mode in ("one-click", "prebuild"):
+        cache_dirs.extend([
+            os.path.join(home, "Downloads/flowork-iso-build/work"),
+            "/opt/floworkos/pipelines",
+        ])
+
+    for d in cache_dirs:
+        if d == "/opt/floworkos/pipelines" and os.path.isdir(d):
+            # Only clean rendered media scratch files in pipelines
+            exts = (".mp4", ".mov", ".mkv", ".avi", ".webm", ".wav", ".m4a", ".mp3", ".blend1")
+            try:
+                with os.scandir(d) as it:
+                    for entry in it:
+                        if entry.is_file(follow_symlinks=False) and entry.name.endswith(exts):
+                            sz = entry.stat(follow_symlinks=False).st_size
+                            if not dry_run:
+                                os.unlink(entry.path)
+                            total_freed += sz
+                            total_items += 1
+            except Exception:
+                pass
+        else:
+            age_h = 1.0 if d == os.path.join(home, ".flowork/tmp") else 0.0
+            f_sz, f_cnt = clean_dir_contents(d, skip_locks=True, max_age_hours=age_h, shred=(mode == "one-click"), dry_run=dry_run)
+            total_freed += f_sz
+            total_items += f_cnt
+
+    # Stale /tmp files older than 24h (or 1h on one-click)
+    tmp_age = 1.0 if mode == "one-click" else 24.0
+    f_sz, f_cnt = clean_dir_contents("/tmp", skip_locks=True, max_age_hours=tmp_age, shred=False, dry_run=dry_run)
+    total_freed += f_sz
+    total_items += f_cnt
+
+    # Orphaned app configs
+    o_sz, o_cnt = clean_orphaned_app_configs(dry_run=dry_run)
+    total_freed += o_sz
+    total_items += o_cnt
+
+    # System APT cache & rotated logs (non-blocking sudo -n)
+    if not dry_run:
+        for cmd in (
+            ["sudo", "-n", "apt-get", "clean"],
+            ["sudo", "-n", "find", "/var/log", "-type", "f", "-name", "*.gz", "-delete"],
+            ["sudo", "-n", "find", "/var/log", "-type", "f", "-name", "*.1", "-delete"],
+        ):
+            try:
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=8, check=False)
+            except Exception:
+                pass
+
+    # 3. Clipboard Wipe, Kernel RAM Drop/Compact, Journal Vacuum, Async SSD TRIM
+    clip_wiped = sanitize_clipboard(dry_run=dry_run) if mode == "one-click" else False
+    ram_dropped = drop_kernel_caches(dry_run=dry_run)
+    vacuum_journal(mode=mode, dry_run=dry_run)
+    if mode == "one-click":
+        trigger_bg_trim(dry_run=dry_run)
+
+    time.sleep(0.15)
+    mem_after = get_avail_mem_mb()
+    ram_reclaimed_mb = max(0, mem_after - mem_before)
+    disk_freed_mb = round(total_freed / (1024.0 * 1024.0), 2)
+    elapsed_ms = int((time.time() - t0) * 1000)
+
+    if mode == "one-click" and not dry_run:
+        threading.Thread(target=play_sfx, args=(SFX_SUB_HIT,), daemon=True).start()
+        try:
+            summary = f"Shredded {total_items} items ({disk_freed_mb:.1f} MB) | RAM +{ram_reclaimed_mb} MB"
+            subprocess.Popen(
+                ["notify-send", "-a", "F-Cleaner", "-i", "edit-clear-all", "F-Cleaner Purge Complete", summary],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            pass
+
+    return {
+        "status": "success",
+        "tool": "F-Cleaner",
+        "mode": mode,
+        "dry_run": dry_run,
+        "items_cleaned": total_items,
+        "disk_freed_bytes": total_freed,
+        "disk_freed_mb": disk_freed_mb,
+        "ram_reclaimed_mb": ram_reclaimed_mb,
+        "clipboard_wiped": clip_wiped,
+        "kernel_cache_dropped": ram_dropped,
+        "elapsed_ms": elapsed_ms,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="F-Cleaner — Unified Headless Anti-Forensic & Disk Hygiene Engine")
+    parser.add_argument("--one-click", action="store_true", help="Run full headless one-click purge (default)")
+    parser.add_argument("--clean-login", action="store_true", help="Run lightweight login hygiene sweep")
+    parser.add_argument("--clean-prebuild", action="store_true", help="Run pre-ISO build hygiene sweep")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate without deleting files")
+    parser.add_argument("--json", action="store_true", help="Output structured JSON result")
+    args = parser.parse_args()
+
+    mode = "one-click"
+    if args.clean_login:
+        mode = "login"
+    elif args.clean_prebuild:
+        mode = "prebuild"
+
+    res = run_f_cleaner(mode=mode, dry_run=args.dry_run)
+    if args.json:
+        print(json.dumps(res, indent=2))
+    else:
+        print(
+            f"[F-CLEANER] mode={res['mode']} items={res['items_cleaned']} "
+            f"disk_freed={res['disk_freed_mb']}MB ram_reclaimed=+{res['ram_reclaimed_mb']}MB "
+            f"elapsed={res['elapsed_ms']}ms"
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

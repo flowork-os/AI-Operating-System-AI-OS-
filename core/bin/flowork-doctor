@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+from datetime import datetime, timezone
+
+CHECKS = []
+
+
+def add_result(name, status, detail, fixed=False):
+    CHECKS.append({
+        "name": name,
+        "status": status,  # ok | warn | fail
+        "detail": detail,
+        "fixed": fixed,
+    })
+
+
+def check_connector(fix=False):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1.5)
+    try:
+        sock.connect(("127.0.0.1", 9099))
+        add_result("sovereign_connector", "ok", "Port 9099 listening")
+    except Exception as e:
+        add_result("sovereign_connector", "warn", f"Port 9099 unreachable: {e}")
+    finally:
+        sock.close()
+
+
+def check_neural_conduit(fix=False):
+    res = subprocess.run(["pgrep", "-f", "flowork-neural-conduit"], capture_output=True, text=True)
+    if res.returncode == 0 and res.stdout.strip():
+        pids = res.stdout.strip().splitlines()
+        add_result("neural_conduit", "ok", f"Running (PIDs: {', '.join(pids)})")
+    else:
+        if fix and os.path.exists("/opt/floworkos/bin/flowork-neural-conduit"):
+            subprocess.Popen(
+                ["nohup", "/opt/floworkos/bin/flowork-neural-conduit"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            add_result("neural_conduit", "ok", "Restarted flowork-neural-conduit", fixed=True)
+        else:
+            add_result("neural_conduit", "warn", "flowork-neural-conduit not running")
+
+
+def check_mrflow_binary(fix=False):
+    path = "/opt/floworkos/bin/mrflow"
+    if not os.path.isfile(path):
+        add_result("mrflow_binary", "fail", "Missing /opt/floworkos/bin/mrflow")
+        return
+    with open(path, "rb") as f:
+        magic = f.read(4)
+    if magic != b"\x7fELF":
+        add_result("mrflow_binary", "fail", "Invalid ELF header on mrflow binary")
+        return
+    if not os.access(path, os.X_OK):
+        if fix:
+            os.chmod(path, 0o755)
+            add_result("mrflow_binary", "ok", "Restored +x permission on mrflow", fixed=True)
+        else:
+            add_result("mrflow_binary", "warn", "mrflow binary missing +x permission")
+    else:
+        size_mb = os.path.getsize(path) / (1024 * 1024)
+        add_result("mrflow_binary", "ok", f"Valid ELF64 ({size_mb:.2f} MB)")
+
+
+def check_json_configs():
+    targets = [
+        ("triggers_json", "/opt/floworkos/system/system_promp/promps/triggers.json"),
+        ("version_json", "/opt/floworkos/system/version.json"),
+    ]
+    for name, path in targets:
+        if not os.path.isfile(path):
+            add_result(name, "warn", f"Missing {path}")
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                json.load(f)
+            add_result(name, "ok", f"Valid JSON ({path})")
+        except Exception as e:
+            add_result(name, "fail", f"Corrupt JSON in {path}: {e}")
+
+
+def check_psi_and_disk():
+    psi_mem = "/proc/pressure/memory"
+    if os.path.isfile(psi_mem):
+        with open(psi_mem, "r", encoding="utf-8") as f:
+            first_line = f.readline().strip()
+        add_result("kernel_psi_memory", "ok", first_line)
+    else:
+        add_result("kernel_psi_memory", "warn", "PSI memory interface unavailable")
+
+    usage = shutil.disk_usage("/")
+    free_gb = usage.free / (1024 ** 3)
+    pct_used = (usage.used / usage.total) * 100.0
+    status = "ok" if pct_used < 90.0 else "warn"
+    add_result("disk_root", status, f"{pct_used:.1f}% used ({free_gb:.2f} GB free)")
+
+
+def check_user_identity_gate(fix=False):
+    session_sh = "/opt/floworkos/session/flowork-session.sh"
+    profile_bin = "/opt/floworkos/bin/flowork-user-profile"
+    if not os.path.isfile(profile_bin):
+        add_result("user_identity_gate", "fail", "Missing flowork-user-profile")
+        return
+    if os.path.isfile(session_sh):
+        with open(session_sh, "r", encoding="utf-8") as f:
+            content = f.read()
+        if "flowork-user-profile" in content:
+            add_result("user_identity_gate", "ok", "Wired into flowork-session.sh startup")
+        else:
+            add_result("user_identity_gate", "warn", "Not wired into flowork-session.sh")
+    else:
+        add_result("user_identity_gate", "warn", "flowork-session.sh not found")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Self-Healing Watchdog & Sentinel")
+    parser.add_argument("--check", action="store_true", help="Run read-only diagnostics (default)")
+    parser.add_argument("--fix", action="store_true", help="Attempt automatic repair of detected issues")
+    parser.add_argument("--json", action="store_true", help="Output structured JSON report")
+    args = parser.parse_args()
+
+    check_connector(fix=args.fix)
+    check_neural_conduit(fix=args.fix)
+    check_mrflow_binary(fix=args.fix)
+    check_json_configs()
+    check_psi_and_disk()
+    check_user_identity_gate(fix=args.fix)
+
+    fails = sum(1 for c in CHECKS if c["status"] == "fail")
+    warns = sum(1 for c in CHECKS if c["status"] == "warn")
+    report = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "summary": {"total": len(CHECKS), "ok": len(CHECKS) - fails - warns, "warn": warns, "fail": fails},
+        "checks": CHECKS,
+    }
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print(f"=== FLOWORK DOCTOR ({report['timestamp']}) ===")
+        for c in CHECKS:
+            tag = c["status"].upper()
+            fix_note = " [FIXED]" if c["fixed"] else ""
+            print(f"[{tag:4}] {c['name']}: {c['detail']}{fix_note}")
+        print(f"Summary: {report['summary']['ok']} OK, {warns} WARN, {fails} FAIL")
+
+    sys.exit(1 if fails > 0 else 0)
+
+
+if __name__ == "__main__":
+    main()

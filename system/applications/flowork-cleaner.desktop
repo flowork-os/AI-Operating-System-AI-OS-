@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Cleaner
+Comment=Anti-Forensic Shred, RAM Compaction & Cache Purge
+Exec=/opt/floworkos/bin/flowork-nitro-purge-run
+Icon=/opt/floworkos/icons/cleaner-broom.png
+Terminal=false
+Type=Application
+Categories=System;Utility;
+StartupNotify=false

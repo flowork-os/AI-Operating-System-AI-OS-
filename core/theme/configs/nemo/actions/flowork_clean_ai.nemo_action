@@ -1,0 +1,8 @@
+[Nemo Action]
+Name=🛡️ Flowork: Hapus AI Fingerprint & Sanitizer
+Comment=Strip ID3 metadata, ultrasonic AI watermarks, and re-encode bitexact
+Exec=/opt/floworkos/bin/flowork-audio-transformer clean-ai %F
+Icon-Name=audio-volume-high
+Selection=notnone
+Extensions=mp3;wav;flac;m4a;ogg;opus;aac;
+Quote=double

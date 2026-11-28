@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Flowork App Manager
+Comment=Uninstall apps, remove bloatware, and deep clean Flowork OS
+Exec=/usr/local/bin/flowork-app-manager
+Icon=system-software-install
+Terminal=false
+Categories=System;Settings;PackageManager;GTK;
+StartupNotify=true

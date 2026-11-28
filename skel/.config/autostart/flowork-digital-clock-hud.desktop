@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Flowork Digital Clock HUD
+Comment=Sovereign Digital Clock & Calendar Desktop HUD
+Exec=systemctl --user start flowork-digital-clock-hud.service
+OnlyShowIn=XFCE;Flowork;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

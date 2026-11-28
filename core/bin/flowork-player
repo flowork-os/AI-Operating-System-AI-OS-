@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 👑 FLOWORK OS — SOVEREIGN MEDIA PLAYER (FilmFlow / flowork-player)
+# High-performance hardware-accelerated video & audio player powered by MPV.
+# ==============================================================================
+set -e
+export DISPLAY="${DISPLAY:-:0}"
+
+if [ -z "$1" ]; then
+    exec /usr/bin/mpv --idle=yes --force-window=yes --autofit=75% --title="Flowork Media Player"
+fi
+
+exec /usr/bin/mpv --force-window=yes --autofit=75% --title="Flowork Media Player" "$@"

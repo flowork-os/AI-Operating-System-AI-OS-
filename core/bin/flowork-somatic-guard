@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""
+flowork-somatic-guard — Somatic Resource Awareness & Auto-Throttle Engine
+Monitors Linux Kernel PSI (/proc/pressure/{cpu,memory,io}) and MemAvailable,
+and automatically throttles/quarantines runaway non-critical processes via
+flowork-cgroup-guardian when system pressure crosses critical thresholds.
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+CGROUP_GUARDIAN = "/opt/floworkos/bin/flowork-cgroup-guardian"
+PROTECTED_NAMES = {
+    "systemd", "init", "kthreadd", "dbus-daemon", "Xorg", "Xwayland",
+    "flowork-sysd", "flowork-connector", "flowork-neural-conduit",
+    "flowork-cgroup-guardian", "flowork-somatic-guard", "flowork-sentinel-daemon",
+    "mrflow", "mrflow-rs", "sshd", "bash", "zsh", "python3",
+}
+
+
+def parse_psi(path: str) -> dict:
+    result = {"some_avg10": 0.0, "some_avg60": 0.0, "full_avg10": 0.0, "full_avg60": 0.0}
+    p = Path(path)
+    if not p.exists():
+        return result
+    for line in p.read_text().splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        kind = parts[0]
+        for kv in parts[1:]:
+            if "=" in kv:
+                k, v = kv.split("=", 1)
+                if k in ("avg10", "avg60"):
+                    try:
+                        result[f"{kind}_{k}"] = float(v)
+                    except ValueError:
+                        pass
+    return result
+
+
+def get_mem_info() -> dict:
+    info = {}
+    for line in Path("/proc/meminfo").read_text().splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            num = v.strip().split()[0]
+            try:
+                info[k] = int(num)
+            except ValueError:
+                pass
+    total = info.get("MemTotal", 1)
+    avail = info.get("MemAvailable", total)
+    pct_avail = round((avail / total) * 100.0, 2)
+    return {
+        "total_mb": round(total / 1024, 1),
+        "available_mb": round(avail / 1024, 1),
+        "available_pct": pct_avail,
+    }
+
+
+def get_top_processes(limit: int = 5) -> list[dict]:
+    try:
+        out = subprocess.check_output(
+            ["ps", "-eo", "pid,pcpu,pmem,comm", "--sort=-pcpu"],
+            text=True,
+            timeout=3,
+        )
+    except Exception:
+        return []
+    procs = []
+    for line in out.splitlines()[1 : limit + 1]:
+        parts = line.split(None, 3)
+        if len(parts) == 4:
+            try:
+                procs.append({
+                    "pid": int(parts[0]),
+                    "cpu_pct": float(parts[1]),
+                    "mem_pct": float(parts[2]),
+                    "comm": parts[3].strip(),
+                })
+            except ValueError:
+                pass
+    return procs
+
+
+def evaluate_somatic_state() -> dict:
+    cpu_psi = parse_psi("/proc/pressure/cpu")
+    mem_psi = parse_psi("/proc/pressure/memory")
+    io_psi = parse_psi("/proc/pressure/io")
+    mem = get_mem_info()
+
+    state = "NOMINAL"
+    reasons = []
+    if mem_psi["some_avg10"] >= 25.0 or mem["available_pct"] < 10.0:
+        state = "CRITICAL"
+        reasons.append(f"Memory pressure critical (PSI={mem_psi['some_avg10']}, Avail={mem['available_pct']}%)")
+    elif cpu_psi["some_avg10"] >= 60.0:
+        state = "CRITICAL"
+        reasons.append(f"CPU pressure critical (PSI={cpu_psi['some_avg10']})")
+    elif mem_psi["some_avg10"] >= 10.0 or cpu_psi["some_avg10"] >= 30.0 or mem["available_pct"] < 20.0:
+        state = "ELEVATED"
+        reasons.append("Moderate CPU/Memory pressure")
+
+    return {
+        "state": state,
+        "reasons": reasons,
+        "psi": {"cpu": cpu_psi, "memory": mem_psi, "io": io_psi},
+        "memory": mem,
+        "top_processes": get_top_processes(5),
+    }
+
+
+def enforce_throttle(telemetry: dict, dry_run: bool = False) -> list[dict]:
+    actions = []
+    if telemetry["state"] != "CRITICAL":
+        return actions
+
+    my_pid = os.getpid()
+    for proc in telemetry["top_processes"]:
+        if proc["pid"] == my_pid or proc["comm"] in PROTECTED_NAMES:
+            continue
+        if proc["cpu_pct"] >= 50.0 or proc["mem_pct"] >= 25.0:
+            if dry_run:
+                actions.append({"pid": proc["pid"], "comm": proc["comm"], "action": "would_quarantine"})
+            elif os.path.exists(CGROUP_GUARDIAN):
+                try:
+                    subprocess.run(
+                        [CGROUP_GUARDIAN, "quarantine", str(proc["pid"])],
+                        check=False,
+                        timeout=5,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    actions.append({"pid": proc["pid"], "comm": proc["comm"], "action": "quarantined"})
+                except Exception as e:
+                    actions.append({"pid": proc["pid"], "comm": proc["comm"], "action": f"error: {e}"})
+            break
+    return actions
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Somatic Resource Awareness & Auto-Throttle")
+    parser.add_argument("--status", action="store_true", help="Print somatic health status (default)")
+    parser.add_argument("--json", action="store_true", help="Output JSON telemetry")
+    parser.add_argument("--enforce", action="store_true", help="Enforce cgroup quarantine if CRITICAL")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate enforcement without freezing")
+    parser.add_argument("--daemon", action="store_true", help="Run continuous monitoring loop")
+    parser.add_argument("--interval", type=int, default=5, help="Daemon poll interval in seconds")
+    args = parser.parse_args()
+
+    if args.daemon:
+        while True:
+            tel = evaluate_somatic_state()
+            if tel["state"] == "CRITICAL":
+                enforce_throttle(tel, dry_run=args.dry_run)
+            time.sleep(args.interval)
+
+    tel = evaluate_somatic_state()
+    if args.enforce or args.dry_run:
+        tel["enforcement_actions"] = enforce_throttle(tel, dry_run=args.dry_run)
+
+    if args.json:
+        print(json.dumps(tel, indent=2))
+    else:
+        print(f"=== FLOWORK SOMATIC GUARD: {tel['state']} ===")
+        print(f"Memory: {tel['memory']['available_mb']} MB / {tel['memory']['total_mb']} MB ({tel['memory']['available_pct']}% free)")
+        print(f"PSI avg10 -> CPU: {tel['psi']['cpu']['some_avg10']} | MEM: {tel['psi']['memory']['some_avg10']} | IO: {tel['psi']['io']['some_avg10']}")
+        if tel["reasons"]:
+            print("Reasons:", "; ".join(tel["reasons"]))
+        print("Top Processes:")
+        for p in tel["top_processes"]:
+            print(f"  PID {p['pid']:>6} | CPU {p['cpu_pct']:>5.1f}% | MEM {p['mem_pct']:>5.1f}% | {p['comm']}")
+
+
+if __name__ == "__main__":
+    main()

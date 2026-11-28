@@ -1,0 +1,98 @@
+@define-color flowork_accent #00ff66;
+@define-color flowork_secondary #00f2fe;
+@define-color theme_selected_bg_color #00ff66;
+@define-color selected_bg_color #00ff66;
+/* Flowork OS GTK4 / Libadwaita Solid Dark Theme
+ * Prevents transparent textviews and broken white-on-white headerbars in GTK4 apps (e.g. gnome-text-editor).
+ */
+
+@define-color accent_color #00ff66;
+@define-color accent_bg_color #00cc52;
+@define-color accent_fg_color #0a0e14;
+
+@define-color window_bg_color #0f141c;
+@define-color window_fg_color #e6edf3;
+
+@define-color view_bg_color #0d1117;
+@define-color view_fg_color #e6edf3;
+
+@define-color headerbar_bg_color #161b22;
+@define-color headerbar_fg_color #e6edf3;
+@define-color headerbar_border_color rgba(255, 255, 255, 0.10);
+@define-color headerbar_backdrop_color #12161d;
+
+@define-color card_bg_color #161b22;
+@define-color card_fg_color #e6edf3;
+
+@define-color popover_bg_color #161b22;
+@define-color popover_fg_color #e6edf3;
+
+@define-color dialog_bg_color #161b22;
+@define-color dialog_fg_color #e6edf3;
+
+window,
+window.background,
+.background {
+    background-color: #0f141c;
+    color: #e6edf3;
+}
+
+headerbar,
+.titlebar {
+    background-color: #161b22;
+    background-image: none;
+    color: #e6edf3;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: none;
+}
+
+headerbar button,
+.titlebar button {
+    color: #e6edf3;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+}
+
+headerbar button:hover,
+.titlebar button:hover {
+    background-color: rgba(0, 255, 102, 0.16);
+    border-color: rgba(0, 255, 102, 0.45);
+}
+
+tabbar,
+tabbar .box,
+tabbar tab {
+    background-color: #12161d;
+    color: #9da7b3;
+}
+
+tabbar tab:checked {
+    background-color: #1c232d;
+    color: #ffffff;
+    border-bottom: 2px solid #00ff66;
+}
+
+textview,
+textview text,
+.view,
+view,
+scrolledwindow,
+scrolledwindow viewport {
+    background-color: #0d1117;
+    color: #e6edf3;
+}
+
+textview text selection {
+    background-color: rgba(0, 255, 102, 0.28);
+    color: #ffffff;
+}
+
+scrollbar slider {
+    background-color: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+}
+
+scrollbar slider:hover {
+    background-color: rgba(0, 255, 102, 0.55);
+}

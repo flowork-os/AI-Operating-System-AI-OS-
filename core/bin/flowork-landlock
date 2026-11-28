@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+import argparse
+import ctypes
+import json
+import os
+import sys
+
+DEFAULT_POLICY_PATH = "/opt/floworkos/policies/landlock-default.json"
+SCAN_ROOTS = ["/opt/floworkos/apps", "/opt/floworkos/skills"]
+
+# x86_64 Linux Landlock syscall numbers
+SYS_LANDLOCK_CREATE_RULESET = 444
+SYS_LANDLOCK_ADD_RULE = 445
+SYS_LANDLOCK_RESTRICT_SELF = 446
+PR_SET_NO_NEW_PRIVS = 38
+
+LANDLOCK_RULE_PATH_BENEATH = 1
+LANDLOCK_ACCESS_FS_EXECUTE = 1 << 0
+LANDLOCK_ACCESS_FS_WRITE_FILE = 1 << 1
+LANDLOCK_ACCESS_FS_READ_FILE = 1 << 2
+LANDLOCK_ACCESS_FS_READ_DIR = 1 << 3
+LANDLOCK_ACCESS_FS_REMOVE_DIR = 1 << 4
+LANDLOCK_ACCESS_FS_REMOVE_FILE = 1 << 5
+LANDLOCK_ACCESS_FS_MAKE_CHAR = 1 << 6
+LANDLOCK_ACCESS_FS_MAKE_DIR = 1 << 7
+LANDLOCK_ACCESS_FS_MAKE_REG = 1 << 8
+LANDLOCK_ACCESS_FS_MAKE_SOCK = 1 << 9
+LANDLOCK_ACCESS_FS_MAKE_FIFO = 1 << 10
+LANDLOCK_ACCESS_FS_MAKE_BLOCK = 1 << 11
+LANDLOCK_ACCESS_FS_MAKE_SYM = 1 << 12
+
+RO_MASK = LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR
+RW_MASK = (
+    RO_MASK
+    | LANDLOCK_ACCESS_FS_WRITE_FILE
+    | LANDLOCK_ACCESS_FS_REMOVE_DIR
+    | LANDLOCK_ACCESS_FS_REMOVE_FILE
+    | LANDLOCK_ACCESS_FS_MAKE_DIR
+    | LANDLOCK_ACCESS_FS_MAKE_REG
+    | LANDLOCK_ACCESS_FS_MAKE_SYM
+)
+EXEC_MASK = RO_MASK | LANDLOCK_ACCESS_FS_EXECUTE
+
+
+class RulesetAttr(ctypes.Structure):
+    _fields_ = [("handled_access_fs", ctypes.c_uint64)]
+
+
+class PathBeneathAttr(ctypes.Structure):
+    _fields_ = [
+        ("allowed_access", ctypes.c_uint64),
+        ("parent_fd", ctypes.c_int32),
+    ]
+
+
+def load_default_policy():
+    with open(DEFAULT_POLICY_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def audit_manifests(init_missing=False, as_json=False):
+    default_pol = load_default_policy()
+    results = []
+    for root in SCAN_ROOTS:
+        if not os.path.isdir(root):
+            continue
+        for entry in sorted(os.listdir(root)):
+            full = os.path.join(root, entry)
+            if not os.path.isdir(full):
+                continue
+            manifest_path = os.path.join(full, "landlock.json")
+            if os.path.isfile(manifest_path):
+                try:
+                    with open(manifest_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    valid = all(k in data for k in ("read_only", "read_write", "execute"))
+                    results.append({"target": full, "status": "ok" if valid else "invalid"})
+                except Exception as e:
+                    results.append({"target": full, "status": f"error: {e}"})
+            else:
+                if init_missing:
+                    pol = dict(default_pol)
+                    pol["read_only"] = list(default_pol["read_only"]) + [full]
+                    with open(manifest_path, "w", encoding="utf-8") as f:
+                        json.dump(pol, f, indent=2)
+                    results.append({"target": full, "status": "initialized"})
+                else:
+                    results.append({"target": full, "status": "missing"})
+
+    if as_json:
+        print(json.dumps({"total": len(results), "items": results}, indent=2))
+    else:
+        ok = sum(1 for r in results if r["status"] in ("ok", "initialized"))
+        print(f"Landlock Audit: {ok}/{len(results)} manifests ready")
+        for r in results:
+            print(f"  [{r['status']:11}] {r['target']}")
+
+
+def apply_landlock_and_exec(target_dir, cmd):
+    manifest_path = os.path.join(target_dir, "landlock.json")
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            pol = json.load(f)
+    else:
+        pol = load_default_policy()
+
+    libc = ctypes.CDLL("libc.so.6", use_errno=True)
+    if libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "prctl(PR_SET_NO_NEW_PRIVS) failed")
+
+    handled = RW_MASK | LANDLOCK_ACCESS_FS_EXECUTE
+    attr = RulesetAttr(handled_access_fs=handled)
+    ruleset_fd = libc.syscall(SYS_LANDLOCK_CREATE_RULESET, ctypes.byref(attr), ctypes.sizeof(attr), 0)
+    if ruleset_fd < 0:
+        raise OSError(ctypes.get_errno(), "landlock_create_ruleset failed")
+
+    def add_paths(paths, mask):
+        for p in paths:
+            if not os.path.exists(p):
+                continue
+            fd = os.open(p, os.O_PATH | os.O_CLOEXEC)
+            try:
+                pb = PathBeneathAttr(allowed_access=mask, parent_fd=fd)
+                libc.syscall(SYS_LANDLOCK_ADD_RULE, ruleset_fd, LANDLOCK_RULE_PATH_BENEATH, ctypes.byref(pb), 0)
+            finally:
+                os.close(fd)
+
+    add_paths(pol.get("read_only", []) + [target_dir], RO_MASK)
+    add_paths(pol.get("read_write", []), RW_MASK)
+    add_paths(pol.get("execute", []), EXEC_MASK)
+
+    if libc.syscall(SYS_LANDLOCK_RESTRICT_SELF, ruleset_fd, 0) != 0:
+        err = ctypes.get_errno()
+        os.close(ruleset_fd)
+        raise OSError(err, "landlock_restrict_self failed")
+    os.close(ruleset_fd)
+    os.execvp(cmd[0], cmd)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Landlock LSM Manifest & Sandbox Runner")
+    sub = parser.add_subparsers(dest="subcmd", required=True)
+
+    p_audit = sub.add_parser("audit", help="Audit or initialize landlock.json manifests")
+    p_audit.add_argument("--init", action="store_true", help="Generate default landlock.json where missing")
+    p_audit.add_argument("--json", action="store_true", help="Output JSON")
+
+    p_run = sub.add_parser("run", help="Run command inside Landlock sandbox for target app/skill")
+    p_run.add_argument("target", help="Target app or skill directory")
+    p_run.add_argument("cmd", nargs=argparse.REMAINDER, help="Command to execute after --")
+
+    args = parser.parse_args()
+    if args.subcmd == "audit":
+        audit_manifests(init_missing=args.init, as_json=args.json)
+    elif args.subcmd == "run":
+        cmd = [c for c in args.cmd if c != "--"] if args.cmd and args.cmd[0] == "--" else args.cmd
+        if not cmd:
+            print("Error: command required after target", file=sys.stderr)
+            sys.exit(2)
+        apply_landlock_and_exec(args.target, cmd)
+
+
+if __name__ == "__main__":
+    main()

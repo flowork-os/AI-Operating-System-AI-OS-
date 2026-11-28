@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""
+👑 FLOWORK OS — FLOWORK SAY (CLI Voice Invocation)
+Author: Dr. Flow (System Architect)
+Usage:
+    flowork-say "Halo bos, sistem operasi Flowork siap melayani anda"
+    flowork-say --lang en "System online, all parameters normal"
+    flowork-say --stop (Instant barge-in / interrupt)
+"""
+
+import sys
+import json
+import urllib.request
+import urllib.error
+import argparse
+import subprocess
+import os
+import re
+
+def clean_for_tts(text: str) -> str:
+    if not text:
+        return ""
+    # 1. Strip markdown table rows (| col1 | col2 | ...) entirely so tables are never read aloud by TTS
+    text = re.sub(r'^[ \t]*\|.*?\|[ \t]*$', ' ', text, flags=re.MULTILINE)
+    # 2. Strip Asian / non-Latin scripts (Hanzi, Kanji, Cyrillic, Hangul, Arabic)
+    text = re.sub(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff]', ' ', text)
+    # 3. Strip weird esoteric unicode symbols, dingbats, emojis, math glyphs, box drawings
+    text = re.sub(r'[\u2500-\u257f\u2580-\u259f\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f9ff\u2022\u25cf\u25c6\u25ca\u2713\u2714\u2716\u2718\u2794\u27a4\u27a2\u2192\u2190\u2191\u2193]', ' ', text)
+    # 4. Clean remaining brackets, hashes, asterisks
+    text = re.sub(r'[*_#`~|<>\[\]\(\)\{\}\\]', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+DAEMON_URL = "http://127.0.0.1:8998"
+EDGE_TTS_BIN = "/opt/floworkos/runtime/venvs/voice/bin/edge-tts"
+FALLBACK_PIPER = "/opt/floworkos/runtime/venvs/voice/bin/piper"
+VOICES_DIR = "/opt/floworkos/runtime/models/piper"
+EN_MODEL = os.path.join(VOICES_DIR, "en_US-ryan-medium.onnx")
+
+def stop_speech():
+    try:
+        req = urllib.request.Request(f"{DAEMON_URL}/barge_in", data=b"{}", headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=1) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+def push_stream_chunk(text: str, reset: bool = False, lang: str = None) -> bool:
+    try:
+        payload = {"text": text, "reset": reset}
+        if lang:
+            payload["lang"] = lang
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(f"{DAEMON_URL}/stream/push", data=data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+def speak_via_daemon(text: str, lang: str = None) -> bool:
+    clean = clean_for_tts(text)
+    if not clean or len(clean) < 2:
+        return False
+    try:
+        payload = {"text": clean, "play": True, "interrupt": False}
+        if lang:
+            payload["lang"] = lang
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(f"{DAEMON_URL}/speak", data=data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=70) as resp:
+            if resp.status == 200:
+                try:
+                    body = json.loads(resp.read().decode('utf-8'))
+                    if body.get("engine") in ("skipped_empty", "failed"):
+                        return False
+                except Exception:
+                    pass
+                return True
+            return False
+    except Exception:
+        return False
+
+def speak_via_edge_tts(text: str, lang: str = "id") -> bool:
+    if not os.path.exists(EDGE_TTS_BIN):
+        return False
+    clean = clean_for_tts(text)
+    if not clean or len(clean) < 2:
+        return False
+    voice = "id-ID-ArdiNeural" if lang == "id" else "en-US-AndrewMultilingualNeural"
+    out_mp3 = "/tmp/flowork_say_edge.mp3"
+    try:
+        cmd = [EDGE_TTS_BIN, "--voice", voice, "--rate", "+0%", "--text", clean, "--write-media", out_mp3]
+        p = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=70)
+        if p.returncode == 0 and os.path.exists(out_mp3):
+            subprocess.Popen(["paplay", out_mp3], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+    except Exception:
+        pass
+    return False
+
+def speak_via_fallback(text: str, lang: str = "en") -> bool:
+    # Strictly forbid using English Piper model to read Indonesian text
+    if lang != "en":
+        return False
+    if not (os.path.exists(FALLBACK_PIPER) and os.path.exists(EN_MODEL)):
+        return False
+    try:
+        wav_raw = "/tmp/flowork_say_raw.wav"
+        cmd = [FALLBACK_PIPER, "--model", EN_MODEL, "--output_file", wav_raw]
+        p = subprocess.run(cmd, input=text, text=True, capture_output=True, timeout=10)
+        if p.returncode == 0 and os.path.exists(wav_raw):
+            subprocess.Popen(["paplay", wav_raw], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+    except Exception:
+        pass
+    return False
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Voice Synthesis CLI")
+    parser.add_argument("text", nargs="*", help="Text to speak")
+    parser.add_argument("--lang", "-l", choices=["id", "en"], default=None, help="Force language (id or en)")
+    parser.add_argument("--stop", "-s", action="store_true", help="Stop any current speech (barge-in)")
+    parser.add_argument("--stream", action="store_true", help="Push clause into real-time streaming audio queue")
+    parser.add_argument("--reset", action="store_true", help="Reset/abort previous stream before pushing chunk")
+    args = parser.parse_args()
+
+    if args.stop:
+        if stop_speech():
+            print("Speech interrupted.")
+            sys.exit(0)
+        else:
+            print("No active speech to interrupt.")
+            sys.exit(1)
+
+    raw_text = " ".join(args.text).strip()
+    if not raw_text:
+        if not sys.stdin.isatty():
+            raw_text = sys.stdin.read().strip()
+
+    clean_text = clean_for_tts(raw_text)
+    if not clean_text or len(clean_text) < 2:
+        # Avoid error or crash when input is purely weird symbols or foreign non-Latin script
+        sys.exit(0)
+
+    if args.stream:
+        if push_stream_chunk(clean_text, reset=args.reset, lang=args.lang):
+            sys.exit(0)
+        # Fallback to direct speak
+        if speak_via_daemon(clean_text, args.lang):
+            sys.exit(0)
+
+    # 1. Try daemon first
+    if speak_via_daemon(clean_text, args.lang):
+        sys.exit(0)
+
+    # 2. Try direct Edge-TTS (Natural fast voice)
+    target_lang = args.lang or "id"
+    if speak_via_edge_tts(clean_text, target_lang):
+        sys.exit(0)
+
+    # 3. Try piper fallback (strictly for English only)
+    if target_lang == "en" and speak_via_fallback(clean_text, "en"):
+        sys.exit(0)
+
+    print("Error: Voice daemon not running and fallback unavailable.")
+    sys.exit(1)
+
+if __name__ == "__main__":
+    main()

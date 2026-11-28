@@ -1,0 +1,340 @@
+{"fn":"ms","args":["1m"]}
+{"fn":"parse","args":["1m"]}
+{"fn":"ms","args":["100"]}
+{"fn":"parse","args":["100"]}
+{"fn":"ms","args":["1h"]}
+{"fn":"parse","args":["1h"]}
+{"fn":"ms","args":["2d"]}
+{"fn":"parse","args":["2d"]}
+{"fn":"ms","args":["3w"]}
+{"fn":"parse","args":["3w"]}
+{"fn":"ms","args":["1s"]}
+{"fn":"parse","args":["1s"]}
+{"fn":"ms","args":["100ms"]}
+{"fn":"parse","args":["100ms"]}
+{"fn":"ms","args":["1y"]}
+{"fn":"parse","args":["1y"]}
+{"fn":"ms","args":["1.5h"]}
+{"fn":"parse","args":["1.5h"]}
+{"fn":"ms","args":["1   s"]}
+{"fn":"parse","args":["1   s"]}
+{"fn":"ms","args":["☃"]}
+{"fn":"parse","args":["☃"]}
+{"fn":"ms","args":["10-.5"]}
+{"fn":"parse","args":["10-.5"]}
+{"fn":"ms","args":["ms"]}
+{"fn":"parse","args":["ms"]}
+{"fn":"ms","args":["1.5H"]}
+{"fn":"parse","args":["1.5H"]}
+{"fn":"ms","args":[".5ms"]}
+{"fn":"parse","args":[".5ms"]}
+{"fn":"ms","args":["-100ms"]}
+{"fn":"parse","args":["-100ms"]}
+{"fn":"ms","args":["-1.5h"]}
+{"fn":"parse","args":["-1.5h"]}
+{"fn":"ms","args":["-10.5h"]}
+{"fn":"parse","args":["-10.5h"]}
+{"fn":"ms","args":["-.5h"]}
+{"fn":"parse","args":["-.5h"]}
+{"fn":"ms","args":["53 milliseconds"]}
+{"fn":"parse","args":["53 milliseconds"]}
+{"fn":"ms","args":["17 msecs"]}
+{"fn":"parse","args":["17 msecs"]}
+{"fn":"ms","args":["1 sec"]}
+{"fn":"parse","args":["1 sec"]}
+{"fn":"ms","args":["1 min"]}
+{"fn":"parse","args":["1 min"]}
+{"fn":"ms","args":["1 hr"]}
+{"fn":"parse","args":["1 hr"]}
+{"fn":"ms","args":["2 days"]}
+{"fn":"parse","args":["2 days"]}
+{"fn":"ms","args":["1 week"]}
+{"fn":"parse","args":["1 week"]}
+{"fn":"ms","args":["1 year"]}
+{"fn":"parse","args":["1 year"]}
+{"fn":"ms","args":["1.5 hours"]}
+{"fn":"parse","args":["1.5 hours"]}
+{"fn":"ms","args":["-100 milliseconds"]}
+{"fn":"parse","args":["-100 milliseconds"]}
+{"fn":"ms","args":["-1.5 hours"]}
+{"fn":"parse","args":["-1.5 hours"]}
+{"fn":"ms","args":["-.5 hr"]}
+{"fn":"parse","args":["-.5 hr"]}
+{"fn":"ms","args":[500,{"long":true}]}
+{"fn":"format","args":[500,{"long":true}]}
+{"fn":"ms","args":[-500,{"long":true}]}
+{"fn":"format","args":[-500,{"long":true}]}
+{"fn":"ms","args":[1000,{"long":true}]}
+{"fn":"format","args":[1000,{"long":true}]}
+{"fn":"ms","args":[1200,{"long":true}]}
+{"fn":"format","args":[1200,{"long":true}]}
+{"fn":"ms","args":[10000,{"long":true}]}
+{"fn":"format","args":[10000,{"long":true}]}
+{"fn":"ms","args":[-1000,{"long":true}]}
+{"fn":"format","args":[-1000,{"long":true}]}
+{"fn":"ms","args":[-1200,{"long":true}]}
+{"fn":"format","args":[-1200,{"long":true}]}
+{"fn":"ms","args":[-10000,{"long":true}]}
+{"fn":"format","args":[-10000,{"long":true}]}
+{"fn":"ms","args":[60000,{"long":true}]}
+{"fn":"format","args":[60000,{"long":true}]}
+{"fn":"ms","args":[72000,{"long":true}]}
+{"fn":"format","args":[72000,{"long":true}]}
+{"fn":"ms","args":[600000,{"long":true}]}
+{"fn":"format","args":[600000,{"long":true}]}
+{"fn":"ms","args":[-60000,{"long":true}]}
+{"fn":"format","args":[-60000,{"long":true}]}
+{"fn":"ms","args":[-72000,{"long":true}]}
+{"fn":"format","args":[-72000,{"long":true}]}
+{"fn":"ms","args":[-600000,{"long":true}]}
+{"fn":"format","args":[-600000,{"long":true}]}
+{"fn":"ms","args":[3600000,{"long":true}]}
+{"fn":"format","args":[3600000,{"long":true}]}
+{"fn":"ms","args":[4320000,{"long":true}]}
+{"fn":"format","args":[4320000,{"long":true}]}
+{"fn":"ms","args":[36000000,{"long":true}]}
+{"fn":"format","args":[36000000,{"long":true}]}
+{"fn":"ms","args":[-3600000,{"long":true}]}
+{"fn":"format","args":[-3600000,{"long":true}]}
+{"fn":"ms","args":[-4320000,{"long":true}]}
+{"fn":"format","args":[-4320000,{"long":true}]}
+{"fn":"ms","args":[-36000000,{"long":true}]}
+{"fn":"format","args":[-36000000,{"long":true}]}
+{"fn":"ms","args":[86400000,{"long":true}]}
+{"fn":"format","args":[86400000,{"long":true}]}
+{"fn":"ms","args":[103680000,{"long":true}]}
+{"fn":"format","args":[103680000,{"long":true}]}
+{"fn":"ms","args":[518400000,{"long":true}]}
+{"fn":"format","args":[518400000,{"long":true}]}
+{"fn":"ms","args":[-86400000,{"long":true}]}
+{"fn":"format","args":[-86400000,{"long":true}]}
+{"fn":"ms","args":[-103680000,{"long":true}]}
+{"fn":"format","args":[-103680000,{"long":true}]}
+{"fn":"ms","args":[-518400000,{"long":true}]}
+{"fn":"format","args":[-518400000,{"long":true}]}
+{"fn":"ms","args":[604800000,{"long":true}]}
+{"fn":"format","args":[604800000,{"long":true}]}
+{"fn":"ms","args":[1209600000,{"long":true}]}
+{"fn":"format","args":[1209600000,{"long":true}]}
+{"fn":"ms","args":[-604800000,{"long":true}]}
+{"fn":"format","args":[-604800000,{"long":true}]}
+{"fn":"ms","args":[-1209600000,{"long":true}]}
+{"fn":"format","args":[-1209600000,{"long":true}]}
+{"fn":"ms","args":[2629800000,{"long":true}]}
+{"fn":"format","args":[2629800000,{"long":true}]}
+{"fn":"ms","args":[3155760000,{"long":true}]}
+{"fn":"format","args":[3155760000,{"long":true}]}
+{"fn":"ms","args":[26298000000,{"long":true}]}
+{"fn":"format","args":[26298000000,{"long":true}]}
+{"fn":"ms","args":[-2629800000,{"long":true}]}
+{"fn":"format","args":[-2629800000,{"long":true}]}
+{"fn":"ms","args":[-3155760000,{"long":true}]}
+{"fn":"format","args":[-3155760000,{"long":true}]}
+{"fn":"ms","args":[-26298000000,{"long":true}]}
+{"fn":"format","args":[-26298000000,{"long":true}]}
+{"fn":"ms","args":[31557600001,{"long":true}]}
+{"fn":"format","args":[31557600001,{"long":true}]}
+{"fn":"ms","args":[37869120001,{"long":true}]}
+{"fn":"format","args":[37869120001,{"long":true}]}
+{"fn":"ms","args":[315576000001,{"long":true}]}
+{"fn":"format","args":[315576000001,{"long":true}]}
+{"fn":"ms","args":[-31557600001,{"long":true}]}
+{"fn":"format","args":[-31557600001,{"long":true}]}
+{"fn":"ms","args":[-37869120001,{"long":true}]}
+{"fn":"format","args":[-37869120001,{"long":true}]}
+{"fn":"ms","args":[-315576000001,{"long":true}]}
+{"fn":"format","args":[-315576000001,{"long":true}]}
+{"fn":"ms","args":[234234234,{"long":true}]}
+{"fn":"format","args":[234234234,{"long":true}]}
+{"fn":"ms","args":[-234234234,{"long":true}]}
+{"fn":"format","args":[-234234234,{"long":true}]}
+{"fn":"ms","args":[500]}
+{"fn":"format","args":[500,{"$undefined":true}]}
+{"fn":"ms","args":[-500]}
+{"fn":"format","args":[-500,{"$undefined":true}]}
+{"fn":"ms","args":[1000]}
+{"fn":"format","args":[1000,{"$undefined":true}]}
+{"fn":"ms","args":[10000]}
+{"fn":"format","args":[10000,{"$undefined":true}]}
+{"fn":"ms","args":[-1000]}
+{"fn":"format","args":[-1000,{"$undefined":true}]}
+{"fn":"ms","args":[-10000]}
+{"fn":"format","args":[-10000,{"$undefined":true}]}
+{"fn":"ms","args":[60000]}
+{"fn":"format","args":[60000,{"$undefined":true}]}
+{"fn":"ms","args":[600000]}
+{"fn":"format","args":[600000,{"$undefined":true}]}
+{"fn":"ms","args":[-60000]}
+{"fn":"format","args":[-60000,{"$undefined":true}]}
+{"fn":"ms","args":[-600000]}
+{"fn":"format","args":[-600000,{"$undefined":true}]}
+{"fn":"ms","args":[3600000]}
+{"fn":"format","args":[3600000,{"$undefined":true}]}
+{"fn":"ms","args":[36000000]}
+{"fn":"format","args":[36000000,{"$undefined":true}]}
+{"fn":"ms","args":[-3600000]}
+{"fn":"format","args":[-3600000,{"$undefined":true}]}
+{"fn":"ms","args":[-36000000]}
+{"fn":"format","args":[-36000000,{"$undefined":true}]}
+{"fn":"ms","args":[86400000]}
+{"fn":"format","args":[86400000,{"$undefined":true}]}
+{"fn":"ms","args":[518400000]}
+{"fn":"format","args":[518400000,{"$undefined":true}]}
+{"fn":"ms","args":[-86400000]}
+{"fn":"format","args":[-86400000,{"$undefined":true}]}
+{"fn":"ms","args":[-518400000]}
+{"fn":"format","args":[-518400000,{"$undefined":true}]}
+{"fn":"ms","args":[604800000]}
+{"fn":"format","args":[604800000,{"$undefined":true}]}
+{"fn":"ms","args":[1209600000]}
+{"fn":"format","args":[1209600000,{"$undefined":true}]}
+{"fn":"ms","args":[-604800000]}
+{"fn":"format","args":[-604800000,{"$undefined":true}]}
+{"fn":"ms","args":[-1209600000]}
+{"fn":"format","args":[-1209600000,{"$undefined":true}]}
+{"fn":"ms","args":[2629800000]}
+{"fn":"format","args":[2629800000,{"$undefined":true}]}
+{"fn":"ms","args":[3155760000]}
+{"fn":"format","args":[3155760000,{"$undefined":true}]}
+{"fn":"ms","args":[26298000000]}
+{"fn":"format","args":[26298000000,{"$undefined":true}]}
+{"fn":"ms","args":[-2629800000]}
+{"fn":"format","args":[-2629800000,{"$undefined":true}]}
+{"fn":"ms","args":[-3155760000]}
+{"fn":"format","args":[-3155760000,{"$undefined":true}]}
+{"fn":"ms","args":[-26298000000]}
+{"fn":"format","args":[-26298000000,{"$undefined":true}]}
+{"fn":"ms","args":[31557600001]}
+{"fn":"format","args":[31557600001,{"$undefined":true}]}
+{"fn":"ms","args":[37869120001]}
+{"fn":"format","args":[37869120001,{"$undefined":true}]}
+{"fn":"ms","args":[315576000001]}
+{"fn":"format","args":[315576000001,{"$undefined":true}]}
+{"fn":"ms","args":[-31557600001]}
+{"fn":"format","args":[-31557600001,{"$undefined":true}]}
+{"fn":"ms","args":[-37869120001]}
+{"fn":"format","args":[-37869120001,{"$undefined":true}]}
+{"fn":"ms","args":[-315576000001]}
+{"fn":"format","args":[-315576000001,{"$undefined":true}]}
+{"fn":"ms","args":[234234234]}
+{"fn":"format","args":[234234234,{"$undefined":true}]}
+{"fn":"ms","args":[-234234234]}
+{"fn":"format","args":[-234234234,{"$undefined":true}]}
+{"fn":"ms","args":[""]}
+{"fn":"parse","args":[""]}
+{"fn":"ms","args":[{"$undefined":true}]}
+{"fn":"ms","args":[null]}
+{"fn":"ms","args":[[]]}
+{"fn":"ms","args":[{}]}
+{"fn":"ms","args":[{"$num":"NaN"}]}
+{"fn":"format","args":[{"$num":"NaN"},{"$undefined":true}]}
+{"fn":"ms","args":[{"$num":"Infinity"}]}
+{"fn":"format","args":[{"$num":"Infinity"},{"$undefined":true}]}
+{"fn":"ms","args":[{"$num":"-Infinity"}]}
+{"fn":"format","args":[{"$num":"-Infinity"},{"$undefined":true}]}
+{"fn":"format","args":[500]}
+{"fn":"format","args":[-500]}
+{"fn":"format","args":[1000]}
+{"fn":"format","args":[10000]}
+{"fn":"format","args":[-1000]}
+{"fn":"format","args":[-10000]}
+{"fn":"format","args":[60000]}
+{"fn":"format","args":[600000]}
+{"fn":"format","args":[-60000]}
+{"fn":"format","args":[-600000]}
+{"fn":"format","args":[3600000]}
+{"fn":"format","args":[36000000]}
+{"fn":"format","args":[-3600000]}
+{"fn":"format","args":[-36000000]}
+{"fn":"format","args":[86400000]}
+{"fn":"format","args":[518400000]}
+{"fn":"format","args":[-86400000]}
+{"fn":"format","args":[-518400000]}
+{"fn":"format","args":[604800000]}
+{"fn":"format","args":[1209600000]}
+{"fn":"format","args":[-604800000]}
+{"fn":"format","args":[-1209600000]}
+{"fn":"format","args":[2629800000]}
+{"fn":"format","args":[3155760000]}
+{"fn":"format","args":[26298000000]}
+{"fn":"format","args":[-2629800000]}
+{"fn":"format","args":[-3155760000]}
+{"fn":"format","args":[-26298000000]}
+{"fn":"format","args":[31557600001]}
+{"fn":"format","args":[37869120001]}
+{"fn":"format","args":[315576000001]}
+{"fn":"format","args":[-31557600001]}
+{"fn":"format","args":[-37869120001]}
+{"fn":"format","args":[-315576000001]}
+{"fn":"format","args":[234234234]}
+{"fn":"format","args":[-234234234]}
+{"fn":"format","args":[""]}
+{"fn":"format","args":[{"$undefined":true}]}
+{"fn":"format","args":[null]}
+{"fn":"format","args":[[]]}
+{"fn":"format","args":[{}]}
+{"fn":"format","args":[{"$num":"NaN"}]}
+{"fn":"format","args":[{"$num":"Infinity"}]}
+{"fn":"format","args":[{"$num":"-Infinity"}]}
+{"fn":"parseStrict","args":["1m"]}
+{"fn":"parseStrict","args":["100"]}
+{"fn":"parseStrict","args":["1h"]}
+{"fn":"parseStrict","args":["2d"]}
+{"fn":"parseStrict","args":["3w"]}
+{"fn":"parseStrict","args":["1s"]}
+{"fn":"parseStrict","args":["100ms"]}
+{"fn":"parseStrict","args":["1mo"]}
+{"fn":"parse","args":["1mo"]}
+{"fn":"parseStrict","args":["1y"]}
+{"fn":"parseStrict","args":["1.5h"]}
+{"fn":"parseStrict","args":["1   s"]}
+{"fn":"parseStrict","args":["☃"]}
+{"fn":"parseStrict","args":["10-.5"]}
+{"fn":"parseStrict","args":["foo"]}
+{"fn":"parse","args":["foo"]}
+{"fn":"parseStrict","args":["53 YeArS"]}
+{"fn":"parse","args":["53 YeArS"]}
+{"fn":"parseStrict","args":["53 WeEkS"]}
+{"fn":"parse","args":["53 WeEkS"]}
+{"fn":"parseStrict","args":["53 DaYS"]}
+{"fn":"parse","args":["53 DaYS"]}
+{"fn":"parseStrict","args":["53 HoUrs"]}
+{"fn":"parse","args":["53 HoUrs"]}
+{"fn":"parseStrict","args":["53 MiLliSeCondS"]}
+{"fn":"parse","args":["53 MiLliSeCondS"]}
+{"fn":"parseStrict","args":[".5ms"]}
+{"fn":"parseStrict","args":["-100ms"]}
+{"fn":"parseStrict","args":["-1.5h"]}
+{"fn":"parseStrict","args":["-10.5h"]}
+{"fn":"parseStrict","args":["-.5h"]}
+{"fn":"parseStrict","args":["53 milliseconds"]}
+{"fn":"parseStrict","args":["17 msecs"]}
+{"fn":"parseStrict","args":["1 sec"]}
+{"fn":"parseStrict","args":["1 min"]}
+{"fn":"parseStrict","args":["1 hr"]}
+{"fn":"parseStrict","args":["2 days"]}
+{"fn":"parseStrict","args":["1 week"]}
+{"fn":"parseStrict","args":["1 month"]}
+{"fn":"parse","args":["1 month"]}
+{"fn":"parseStrict","args":["1 year"]}
+{"fn":"parseStrict","args":["1.5 hours"]}
+{"fn":"parseStrict","args":["-100 milliseconds"]}
+{"fn":"parseStrict","args":["-1.5 hours"]}
+{"fn":"parseStrict","args":["-.5 hr"]}
+{"fn":"parseStrict","args":[""]}
+{"fn":"parseStrict","args":["▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲"]}
+{"fn":"parse","args":["▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲"]}
+{"fn":"parseStrict","args":[{"$undefined":true}]}
+{"fn":"parse","args":[{"$undefined":true}]}
+{"fn":"parseStrict","args":[null]}
+{"fn":"parse","args":[null]}
+{"fn":"parseStrict","args":[[]]}
+{"fn":"parse","args":[[]]}
+{"fn":"parseStrict","args":[{}]}
+{"fn":"parse","args":[{}]}
+{"fn":"parseStrict","args":[{"$num":"NaN"}]}
+{"fn":"parse","args":[{"$num":"NaN"}]}
+{"fn":"parseStrict","args":[{"$num":"Infinity"}]}
+{"fn":"parse","args":[{"$num":"Infinity"}]}
+{"fn":"parseStrict","args":[{"$num":"-Infinity"}]}
+{"fn":"parse","args":[{"$num":"-Infinity"}]}

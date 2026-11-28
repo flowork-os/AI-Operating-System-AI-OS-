@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# FLOWORK OS — SOVEREIGN GIT ROLLBACK TO RILIS V.1.0
+# One-click reset repo lokal + force push ke GitHub
+# ==============================================================================
+set -euo pipefail
+
+BOLD="\033[1m"
+GREEN="\033[38;2;0;255;102m"
+CYAN="\033[38;2;0;242;254m"
+AMBER="\033[38;2;255;184;0m"
+RED="\033[38;2;255;51;102m"
+RESET="\033[0m"
+
+REPO_DIR="${HOME}/flowork-os-repo"
+FLOWORK_ROOT="/opt/floworkos"
+RELEASE_HASH="0b793fea"
+RELEASE_TAG="RILIS V.1.0"
+
+# --- Resolve token ---
+TOKEN_PATH=""
+for candidate in "${HOME}/Downloads/token" "/home/awenkaudico/Downloads/token"; do
+    if [ -f "$candidate" ]; then
+        TOKEN_PATH="$candidate"
+        break
+    fi
+done
+
+log_info()  { echo -e "${BOLD}${CYAN}[INFO]${RESET}  $*"; }
+log_ok()    { echo -e "${BOLD}${GREEN}[OK]${RESET}    $*"; }
+log_warn()  { echo -e "${BOLD}${AMBER}[WARN]${RESET}  $*"; }
+log_fail()  { echo -e "${BOLD}${RED}[FAIL]${RESET}  $*"; }
+
+# --- GUI or CLI mode ---
+GUI_MODE=false
+if [[ "${1:-}" == "--gui" ]]; then
+    GUI_MODE=true
+fi
+
+confirm_rollback() {
+    if $GUI_MODE && command -v zenity &>/dev/null; then
+        zenity --question \
+            --title="Flowork OS Rollback" \
+            --text="ROLLBACK ke ${RELEASE_TAG}?\n\nSemua perubahan setelah rilis akan DIHAPUS PERMANEN.\nRepo lokal dan GitHub akan di-reset ke commit:\n${RELEASE_HASH}\n\nLanjutkan?" \
+            --ok-label="YA, ROLLBACK" \
+            --cancel-label="BATAL" \
+            --width=420 --height=200 2>/dev/null
+        return $?
+    else
+        echo ""
+        echo -e "${BOLD}${RED}  ⚠  PERINGATAN: ROLLBACK DESTRUKTIF  ⚠${RESET}"
+        echo -e "  Semua perubahan setelah ${RELEASE_TAG} akan DIHAPUS PERMANEN."
+        echo -e "  Repo lokal + GitHub di-reset ke commit: ${RELEASE_HASH}"
+        echo ""
+        read -rp "  Ketik 'YA' untuk melanjutkan: " answer
+        [[ "$answer" == "YA" ]] && return 0 || return 1
+    fi
+}
+
+notify_result() {
+    local title="$1" msg="$2" icon="$3"
+    if command -v notify-send &>/dev/null; then
+        notify-send -i "$icon" "$title" "$msg" 2>/dev/null || true
+    fi
+    if $GUI_MODE && command -v zenity &>/dev/null; then
+        zenity --info --title="$title" --text="$msg" --width=380 --height=140 2>/dev/null || true
+    fi
+}
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+echo -e "${BOLD}${CYAN}================================================================${RESET}"
+echo -e "${BOLD}${GREEN}  FLOWORK OS — SOVEREIGN ROLLBACK ENGINE                        ${RESET}"
+echo -e "${BOLD}${CYAN}================================================================${RESET}"
+
+# 1. Validasi repo
+if [ ! -d "${REPO_DIR}/.git" ]; then
+    log_fail "Repo tidak ditemukan di ${REPO_DIR}"
+    notify_result "Rollback Gagal" "Repo git tidak ditemukan di ${REPO_DIR}" "dialog-error"
+    exit 1
+fi
+
+cd "${REPO_DIR}"
+
+# 2. Konfirmasi
+if ! confirm_rollback; then
+    log_warn "Rollback dibatalkan oleh user."
+    exit 0
+fi
+
+log_info "Memulai rollback ke ${RELEASE_TAG}..."
+
+# 3. Re-sync dari /opt/floworkos ke repo (fresh copy)
+log_info "Sinkronisasi ${FLOWORK_ROOT} -> ${REPO_DIR}/core ..."
+rsync -a --delete \
+    --exclude='.git' \
+    --exclude='node_modules' \
+    --exclude='__pycache__' \
+    --exclude='*.pyc' \
+    --exclude='.env' \
+    --exclude='token' \
+    --exclude='vault.json' \
+    --exclude='flowork.dev' \
+    --exclude='user_data' \
+    --exclude='chat_logs' \
+    --exclude='*.log' \
+    "${FLOWORK_ROOT}/" "${REPO_DIR}/core/" 2>/dev/null || true
+
+# 4. Orphan reset — hapus semua histori
+log_info "Membuat orphan branch tanpa histori..."
+git checkout --orphan rollback-fresh 2>/dev/null
+git add -A
+git commit -m "${RELEASE_TAG}" --quiet
+
+# 5. Ganti main
+git branch -D main 2>/dev/null || true
+git branch -m main
+
+# 6. Purge histori lama
+log_info "Purge reflog dan garbage collect..."
+git reflog expire --expire=now --all 2>/dev/null
+git gc --prune=now --aggressive --quiet 2>/dev/null
+
+# 7. Force push ke GitHub
+if [ -n "${TOKEN_PATH}" ] && [ -f "${TOKEN_PATH}" ]; then
+    TOKEN=$(cat "${TOKEN_PATH}")
+    REMOTE_URL=$(git remote get-url origin | sed 's|https://|https://'"${TOKEN}"'@|')
+    git remote set-url origin "${REMOTE_URL}"
+    
+    log_info "Force push ke GitHub..."
+    if git push origin main --force 2>&1; then
+        log_ok "Push berhasil!"
+    else
+        log_fail "Push gagal! Cek koneksi atau token."
+        # Bersihkan token dari URL
+        git remote set-url origin "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git"
+        notify_result "Rollback Gagal" "Force push ke GitHub gagal.\nCek koneksi atau token." "dialog-error"
+        exit 1
+    fi
+    
+    # Bersihkan token dari remote URL
+    git remote set-url origin "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git"
+else
+    log_warn "Token tidak ditemukan. Rollback lokal berhasil, tapi TIDAK di-push ke GitHub."
+    log_warn "Taruh token di ~/Downloads/token lalu jalankan:"
+    echo -e "  ${CYAN}cd ${REPO_DIR} && git push origin main --force${RESET}"
+fi
+
+# 8. Verifikasi
+FINAL_HASH=$(git log --oneline -1 | awk '{print $1}')
+FINAL_MSG=$(git log --oneline -1 | cut -d' ' -f2-)
+TOTAL_COMMITS=$(git rev-list --count HEAD)
+
+echo ""
+echo -e "${BOLD}${CYAN}================================================================${RESET}"
+echo -e "${BOLD}${GREEN}  ROLLBACK SELESAI${RESET}"
+echo -e "  Commit  : ${CYAN}${FINAL_HASH}${RESET} ${FINAL_MSG}"
+echo -e "  Total   : ${TOTAL_COMMITS} commit (histori bersih)"
+echo -e "  .git    : $(du -sh .git | awk '{print $1}')"
+echo -e "${BOLD}${CYAN}================================================================${RESET}"
+
+notify_result "Rollback Berhasil" "Repo di-reset ke ${RELEASE_TAG}\nCommit: ${FINAL_HASH}\nHistori bersih, 1 commit." "dialog-information"
+
+log_ok "Flowork OS telah di-rollback ke ${RELEASE_TAG}. Semua histori lama musnah."
+exit 0

@@ -1,0 +1,8 @@
+[Nemo Action]
+Name=🎚️ Flowork: Auto-Mastering (-14 LUFS)
+Comment=Normalize loudness to broadcast streaming standard (-14 LUFS, -1dB True Peak)
+Exec=/opt/floworkos/bin/flowork-audio-transformer mastering %F
+Icon-Name=audio-volume-high
+Selection=notnone
+Extensions=mp3;wav;flac;m4a;ogg;opus;aac;
+Quote=double

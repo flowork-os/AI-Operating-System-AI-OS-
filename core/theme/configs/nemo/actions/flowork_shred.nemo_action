@@ -1,0 +1,10 @@
+[Nemo Action]
+Active=true
+Name=Flowork: 💀 Hapus Permanen (Anti-Forensik)
+Comment=DoD 5220.22-M 3-Pass Random + Zero-Fill Overwrite Shredder
+Exec=/opt/floworkos/bin/flowork-shred %F
+Icon-Name=security-high
+Selection=notnone
+Extensions=any;
+Quote=double
+Terminal=false

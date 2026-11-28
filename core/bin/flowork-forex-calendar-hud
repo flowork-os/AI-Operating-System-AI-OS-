@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 👑 FLOWORK OS — QUANTUM FOREX CALENDAR DESKTOP HUD LAUNCHER
+# ==============================================================================
+exec /usr/bin/python3 /opt/floworkos/engine/forex_calendar/forex_calendar_hud.py "$@"

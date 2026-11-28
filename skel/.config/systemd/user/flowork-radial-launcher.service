@@ -1,0 +1,13 @@
+[Unit]
+Description=Flowork OS Orbital Radial Arc Launcher Daemon
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/floworkos/bin/flowork-radial-launcher
+Restart=always
+RestartSec=1
+KillMode=process
+
+[Install]
+WantedBy=default.target

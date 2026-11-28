@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=DiskCraft Background Sentinel
+Comment=Automatic background disk hygiene sweep on login
+Exec=/opt/floworkos/bin/diskcraft --clean-login
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

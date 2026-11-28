@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import sys
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib
+
+
+class AskPopupWindow(Gtk.Window):
+    def __init__(self, questions):
+        super().__init__(title="Mr. Flow — Sovereign Inquiry")
+        self.questions = questions if isinstance(questions, list) else []
+        self.result_answers = None
+        self.widgets = []
+
+        self.set_default_size(560, -1)
+        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+        self.set_resizable(True)
+        self.set_keep_above(True)
+        self.stick()
+        self.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+        self.set_urgency_hint(True)
+
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual and screen.is_composited():
+            self.set_visual(visual)
+        self.set_app_paintable(True)
+
+        css = b"""
+        window {
+            background-color: rgba(3, 9, 16, 0.95);
+            border: 1.5px solid rgba(0, 255, 102, 0.75);
+            border-radius: 14px;
+        }
+        .hdr-lbl {
+            color: #00ff66;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        .q-lbl {
+            color: #eef7ff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        checkbutton, radiobutton {
+            color: #cfe6f5;
+            font-size: 12.5px;
+            padding: 4px 2px;
+        }
+        entry {
+            background-color: rgba(10, 22, 36, 0.9);
+            color: #ffffff;
+            border: 1px solid rgba(0, 242, 254, 0.45);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 12.5px;
+        }
+        entry:focus {
+            border-color: #00ff66;
+        }
+        .submit-btn {
+            background-image: linear-gradient(90deg, #00c853, #00e5ff);
+            color: #020810;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 9px 18px;
+            border: none;
+        }
+        .cancel-btn {
+            background-color: rgba(255, 82, 82, 0.18);
+            color: #ff8a80;
+            border: 1px solid rgba(255, 82, 82, 0.45);
+            border-radius: 8px;
+            padding: 9px 14px;
+        }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        outer.set_margin_top(20)
+        outer.set_margin_bottom(20)
+        outer.set_margin_start(24)
+        outer.set_margin_end(24)
+        self.add(outer)
+
+        hdr = Gtk.Label(label="MR. FLOW — KONFIRMASI DESKTOP")
+        hdr.get_style_context().add_class("hdr-lbl")
+        hdr.set_xalign(0.0)
+        outer.pack_start(hdr, False, False, 0)
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_max_content_height(420)
+        scroll.set_propagate_natural_height(True)
+        outer.pack_start(scroll, True, True, 0)
+
+        q_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        scroll.add(q_box)
+
+        for idx, q in enumerate(self.questions):
+            q_text = str(q.get("question", f"Pertanyaan {idx + 1}"))
+            options = q.get("options") or []
+            multi = bool(q.get("is_multi_select", False))
+
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            lbl_q = Gtk.Label(label=f"{idx + 1}. {q_text}")
+            lbl_q.get_style_context().add_class("q-lbl")
+            lbl_q.set_line_wrap(True)
+            lbl_q.set_xalign(0.0)
+            card.pack_start(lbl_q, False, False, 0)
+
+            opt_controls = []
+            if options:
+                if multi:
+                    for opt in options:
+                        cb = Gtk.CheckButton(label=str(opt))
+                        card.pack_start(cb, False, False, 0)
+                        opt_controls.append((str(opt), cb))
+                else:
+                    group = None
+                    for o_idx, opt in enumerate(options):
+                        rb = Gtk.RadioButton.new_with_label_from_widget(group, str(opt))
+                        if group is None:
+                            group = rb
+                        if o_idx == 0:
+                            rb.set_active(True)
+                        card.pack_start(rb, False, False, 0)
+                        opt_controls.append((str(opt), rb))
+
+            custom_entry = Gtk.Entry()
+            custom_entry.set_placeholder_text(
+                "Atau ketik jawaban kustom di sini..." if options else "Ketik jawabanmu di sini..."
+            )
+            custom_entry.connect("activate", lambda *_: self.on_submit(None))
+            card.pack_start(custom_entry, False, False, 2)
+
+            self.widgets.append({
+                "question": q_text,
+                "multi": multi,
+                "controls": opt_controls,
+                "entry": custom_entry,
+            })
+            q_box.pack_start(card, False, False, 0)
+
+        btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        btn_cancel = Gtk.Button(label="Batal")
+        btn_cancel.get_style_context().add_class("cancel-btn")
+        btn_cancel.connect("clicked", self.on_cancel)
+        btn_row.pack_start(btn_cancel, False, False, 0)
+
+        btn_submit = Gtk.Button(label="Kirim Jawaban")
+        btn_submit.get_style_context().add_class("submit-btn")
+        btn_submit.connect("clicked", self.on_submit)
+        btn_row.pack_end(btn_submit, False, False, 0)
+        outer.pack_end(btn_row, False, False, 0)
+
+        self.connect("delete-event", self.on_cancel)
+        GLib.timeout_add(200, self._enforce_top)
+
+    def _enforce_top(self):
+        if self.get_visible():
+            self.set_keep_above(True)
+            self.present()
+        return True
+
+    def on_cancel(self, *_):
+        self.result_answers = None
+        Gtk.main_quit()
+        return False
+
+    def on_submit(self, _):
+        answers = {}
+        for idx, w in enumerate(self.widgets):
+            custom = w["entry"].get_text().strip()
+            if w["controls"]:
+                if w["multi"]:
+                    selected = [lbl for lbl, cb in w["controls"] if cb.get_active()]
+                    if custom:
+                        selected.append(custom)
+                    answers[w["question"]] = selected
+                else:
+                    if custom:
+                        answers[w["question"]] = custom
+                    else:
+                        selected = next((lbl for lbl, rb in w["controls"] if rb.get_active()), "")
+                        answers[w["question"]] = selected
+            else:
+                answers[w["question"]] = custom
+        self.result_answers = answers
+        Gtk.main_quit()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Sovereign Desktop Ask Popup")
+    parser.add_argument("--json", type=str, help="JSON payload with questions")
+    args = parser.parse_args()
+
+    raw = args.json if args.json else sys.stdin.read()
+    try:
+        payload = json.loads(raw)
+    except Exception as e:
+        print(json.dumps({"error": f"Invalid JSON: {e}"}), file=sys.stderr)
+        sys.exit(1)
+
+    questions = payload.get("questions", payload if isinstance(payload, list) else [])
+    win = AskPopupWindow(questions)
+    win.show_all()
+    win.present()
+    Gtk.main()
+
+    if win.result_answers is None:
+        print(json.dumps({"cancelled": True}))
+        sys.exit(1)
+
+    print(json.dumps({"answers": win.result_answers}, ensure_ascii=False))
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

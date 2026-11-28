@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""
+flowork-palette — Unified Sovereign Command Palette
+Instant fuzzy launcher for Flowork OS apps (.desktop), skills, and system actions.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+APPS_DIR = Path("/opt/floworkos/apps")
+SKILLS_DIR = Path("/opt/floworkos/skills")
+
+
+def load_palette_items() -> list[dict]:
+    items = [
+        {
+            "kind": "ACTION",
+            "name": "Manifest Audit (flowork-manifest-check)",
+            "desc": "Validate apps, symlinks, skills, and ISO builder rules",
+            "exec": "x-terminal-emulator -e bash -c 'flowork-manifest-check; read -p \"Press Enter...\"'",
+        },
+        {
+            "kind": "ACTION",
+            "name": "Somatic Guard Status (flowork-somatic-guard)",
+            "desc": "Inspect Kernel PSI pressure and memory health",
+            "exec": "x-terminal-emulator -e bash -c 'flowork-somatic-guard; read -p \"Press Enter...\"'",
+        },
+        {
+            "kind": "ACTION",
+            "name": "GitHub Sync (flowork-upload)",
+            "desc": "Push Flowork OS changes to GitHub repository",
+            "exec": "x-terminal-emulator -e bash -c 'flowork-upload; read -p \"Press Enter...\"'",
+        },
+    ]
+
+    if APPS_DIR.exists():
+        for df in sorted(APPS_DIR.glob("*.desktop")):
+            try:
+                txt = df.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            name_m = re.search(r"^Name=(.+)$", txt, re.MULTILINE)
+            exec_m = re.search(r"^Exec=(.+)$", txt, re.MULTILINE)
+            desc_m = re.search(r"^(?:Comment|GenericName)=(.+)$", txt, re.MULTILINE)
+            if name_m and exec_m:
+                cmd = re.sub(r"%[fFuUdDnNickvm]", "", exec_m.group(1)).strip()
+                items.append({
+                    "kind": "APP",
+                    "name": name_m.group(1).strip(),
+                    "desc": desc_m.group(1).strip() if desc_m else df.stem,
+                    "exec": cmd,
+                })
+
+    if SKILLS_DIR.exists():
+        for sd in sorted(SKILLS_DIR.iterdir()):
+            if sd.is_dir() and (sd / "SKILL.md").is_file():
+                items.append({
+                    "kind": "SKILL",
+                    "name": sd.name,
+                    "desc": f"Sovereign Skill: {sd.name}",
+                    "exec": f"xdg-open {sd / 'SKILL.md'}",
+                })
+
+    return items
+
+
+def launch_gui(items: list[dict]):
+    import gi
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, GLib, Gtk
+
+    css = b"""
+    window {
+        background-color: rgba(10, 15, 28, 0.94);
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        border-radius: 14px;
+    }
+    entry {
+        background: rgba(15, 23, 42, 0.9);
+        color: #f8fafc;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+    }
+    list, row {
+        background: transparent;
+        color: #e2e8f0;
+    }
+    row:selected {
+        background: rgba(56, 189, 248, 0.22);
+        border-radius: 6px;
+    }
+    """
+    provider = Gtk.CssProvider()
+    provider.load_from_data(css)
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+
+    win = Gtk.Window(title="Flowork Sovereign Palette")
+    win.set_default_size(640, 420)
+    win.set_position(Gtk.WindowPosition.CENTER)
+    win.set_decorated(False)
+    win.set_keep_above(True)
+
+    screen = win.get_screen()
+    visual = screen.get_rgba_visual()
+    if visual and screen.is_composited():
+        win.set_visual(visual)
+
+    vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    vbox.set_margin_top(14)
+    vbox.set_margin_bottom(14)
+    vbox.set_margin_start(14)
+    vbox.set_margin_end(14)
+    win.add(vbox)
+
+    entry = Gtk.Entry()
+    entry.set_placeholder_text("Search Flowork apps, skills, or sovereign actions...")
+    vbox.pack_start(entry, False, False, 0)
+
+    scroll = Gtk.ScrolledWindow()
+    scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    scroll.set_vexpand(True)
+    listbox = Gtk.ListBox()
+    listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+    scroll.add(listbox)
+    vbox.pack_start(scroll, True, True, 0)
+
+    filtered_items = []
+
+    def populate(query: str = ""):
+        nonlocal filtered_items
+        for child in listbox.get_children():
+            listbox.remove(child)
+        q = query.strip().lower()
+        filtered_items = [
+            it for it in items
+            if not q or q in it["name"].lower() or q in it["desc"].lower() or q in it["kind"].lower()
+        ][:40]
+        for it in filtered_items:
+            row = Gtk.ListBoxRow()
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            hbox.set_margin_top(6)
+            hbox.set_margin_bottom(6)
+            hbox.set_margin_start(8)
+            hbox.set_margin_end(8)
+
+            badge = Gtk.Label()
+            color = "#00f2fe" if it["kind"] == "APP" else ("#a78bfa" if it["kind"] == "SKILL" else "#34d399")
+            badge.set_markup(f"<span font_family='JetBrains Mono' size='x-small' weight='bold' color='{color}'>[{it['kind']}]</span>")
+            hbox.pack_start(badge, False, False, 0)
+
+            lbl = Gtk.Label()
+            name_esc = GLib.markup_escape_text(it["name"])
+            desc_esc = GLib.markup_escape_text(it["desc"][:65])
+            lbl.set_markup(f"<b>{name_esc}</b>  <span size='small' color='#94a3b8'>{desc_esc}</span>")
+            lbl.set_xalign(0)
+            hbox.pack_start(lbl, True, True, 0)
+
+            row.add(hbox)
+            listbox.add(row)
+        listbox.show_all()
+        if filtered_items:
+            listbox.select_row(listbox.get_row_at_index(0))
+
+    def execute_selected():
+        row = listbox.get_selected_row()
+        if not row:
+            return
+        idx = row.get_index()
+        if 0 <= idx < len(filtered_items):
+            cmd = filtered_items[idx]["exec"]
+            subprocess.Popen(cmd, shell=True, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            Gtk.main_quit()
+
+    def on_key_press(widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            Gtk.main_quit()
+            return True
+        if event.keyval == Gdk.KEY_Return:
+            execute_selected()
+            return True
+        if event.keyval == Gdk.KEY_Down:
+            row = listbox.get_selected_row()
+            idx = (row.get_index() + 1) if row else 0
+            nxt = listbox.get_row_at_index(idx)
+            if nxt:
+                listbox.select_row(nxt)
+            return True
+        if event.keyval == Gdk.KEY_Up:
+            row = listbox.get_selected_row()
+            idx = max(0, (row.get_index() - 1)) if row else 0
+            prv = listbox.get_row_at_index(idx)
+            if prv:
+                listbox.select_row(prv)
+            return True
+        return False
+
+    entry.connect("changed", lambda w: populate(w.get_text()))
+    listbox.connect("row-activated", lambda lb, r: execute_selected())
+    win.connect("key-press-event", on_key_press)
+    win.connect("destroy", Gtk.main_quit)
+
+    populate()
+    win.show_all()
+    entry.grab_focus()
+    Gtk.main()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Unified Sovereign Command Palette")
+    parser.add_argument("--list", action="store_true", help="List indexed palette items as JSON and exit")
+    args = parser.parse_args()
+
+    items = load_palette_items()
+    if args.list:
+        print(json.dumps({"count": len(items), "sample": items[:5]}, indent=2))
+        sys.exit(0)
+
+    launch_gui(items)
+
+
+if __name__ == "__main__":
+    main()

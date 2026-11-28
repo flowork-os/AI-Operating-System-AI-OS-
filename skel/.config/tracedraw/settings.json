@@ -1,0 +1,962 @@
+{
+  "language": "",
+  "recent_files": [],
+  "workspace": "default",
+  "show_welcome_on_start": true,
+  "welcome_tab_closed": false,
+  "crop_picture_pixels": true,
+  "table": {
+    "tab_inserts_tab": false,
+    "tab_by_columns": false
+  },
+  "units": "mm",
+  "nudge_mm": 2.54,
+  "super_nudge_mm": 5.08,
+  "micro_nudge_mm": 0.254,
+  "duplicate_offset_mm": [
+    0.0,
+    0.0
+  ],
+  "default_dpi": 300.0,
+  "snap": {
+    "grid": false,
+    "guides": true,
+    "objects": false,
+    "page": true,
+    "threshold_px": 10.0,
+    "modes": {
+      "node": true,
+      "intersection": true,
+      "midpoint": true,
+      "quadrant": true,
+      "tangent": true,
+      "perpendicular": true,
+      "edge": true,
+      "center": true,
+      "text_baseline": true
+    },
+    "show_marks": true,
+    "screen_tips": true,
+    "pixels": false,
+    "baseline_grid": false,
+    "alignment_guides": false,
+    "dynamic_guides": false,
+    "off": false,
+    "align": {
+      "each_object": false,
+      "edges": true,
+      "centers": true,
+      "page": true,
+      "margins": false,
+      "offset_mm": 5.0,
+      "inset_mm": 5.0,
+      "equal_spacing": true,
+      "equal_size": true,
+      "color": [
+        230,
+        40,
+        150
+      ],
+      "style": "Solid"
+    },
+    "dynamic": {
+      "angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "tooltip": true,
+      "ticks": false,
+      "tick_mm": 5.0,
+      "snap_ticks": false,
+      "color": [
+        40,
+        150,
+        90
+      ],
+      "style": "Dashed"
+    }
+  },
+  "shortcuts": [],
+  "bitmap_editor": "",
+  "last_dir": null,
+  "last_export_dir": null,
+  "folder_bookmarks": [],
+  "color": {
+    "rgb_profile": "sRGB IEC61966-2.1",
+    "cmyk_profile": "Generic CMYK (open)",
+    "intent": "Relative colorimetric",
+    "black_point_compensation": true,
+    "proof_profile": "Generic CMYK (open)",
+    "rgb_profile_path": "",
+    "cmyk_profile_path": "",
+    "gray_profile": "Gray Gamma 2.2",
+    "gray_profile_path": "",
+    "preset": "",
+    "presets": [],
+    "primary_color_mode": "CMYK",
+    "builtin_engine": false,
+    "preserve_pure_black": false,
+    "map_gray_to_black": true,
+    "open_rgb": 0,
+    "open_cmyk": 0,
+    "open_gray": 0,
+    "warn_open_mismatch": false,
+    "warn_open_missing": false,
+    "import_rgb": 0,
+    "import_cmyk": 1,
+    "import_gray": 0,
+    "warn_import_mismatch": false,
+    "warn_import_missing": false,
+    "spot_definition": 0
+  },
+  "show_outline_flyout": false,
+  "toolbox": [
+    "pick",
+    "shape",
+    "crop",
+    "zoom",
+    "freehand",
+    "brush_strokes",
+    "variable_outline",
+    "rectangle",
+    "ellipse",
+    "polygon",
+    "text",
+    "parallel_dimension",
+    "connector",
+    "drop_shadow",
+    "transparency",
+    "color_eyedropper",
+    "interactive_fill",
+    "outline_pen"
+  ],
+  "wheel_zooms": true,
+  "open_view": "fit_page",
+  "custom_arrowheads": [],
+  "custom_dashes": [],
+  "page_sizes": [],
+  "outline_units": "pt",
+  "text_units": "pt",
+  "document_defaults": {
+    "grid": {
+      "spacing_x": 10.0,
+      "spacing_y": 10.0,
+      "display": "lines",
+      "baseline_spacing": 4.938888888888888,
+      "baseline_start": 12.7,
+      "baseline_color": {
+        "model": "rgb",
+        "r": 0.56078434,
+        "g": 0.78039217,
+        "b": 0.9411765
+      },
+      "pixel_color": {
+        "model": "rgb",
+        "r": 0.8509804,
+        "g": 0.8509804,
+        "b": 0.8509804
+      },
+      "pixel_opacity": 1.0
+    },
+    "rulers": {
+      "origin_x": 0.0,
+      "origin_y": 0.0,
+      "tick_divisions": 10,
+      "scale_page": 1.0,
+      "scale_world": 1.0,
+      "scale_page_units": "",
+      "scale_world_units": ""
+    },
+    "guides": {
+      "color": {
+        "model": "rgb",
+        "r": 0.0,
+        "g": 0.0,
+        "b": 1.0
+      },
+      "preset_color": {
+        "model": "rgb",
+        "r": 0.0,
+        "g": 0.6,
+        "b": 1.0
+      }
+    },
+    "objects": {
+      "graphic": {
+        "fill": {
+          "fill": "none"
+        },
+        "stroke": {
+          "color": {
+            "model": "cmyk",
+            "c": 0.0,
+            "m": 0.0,
+            "y": 0.0,
+            "k": 1.0
+          },
+          "width": 0.2,
+          "cap": "butt",
+          "join": "miter",
+          "dash": [],
+          "scale_with_object": false,
+          "behind_fill": false,
+          "start_arrow": "none",
+          "end_arrow": "none",
+          "stretch": 1.0,
+          "nib_angle": 0.0,
+          "miter_limit": 45.0
+        },
+        "follow": {
+          "fill": false,
+          "outline": true
+        }
+      },
+      "artistic_text": {
+        "fill": {
+          "fill": "solid",
+          "model": "cmyk",
+          "c": 0.0,
+          "m": 0.0,
+          "y": 0.0,
+          "k": 1.0
+        },
+        "stroke": null,
+        "follow": {
+          "fill": true,
+          "outline": false
+        }
+      },
+      "paragraph_text": {
+        "fill": {
+          "fill": "solid",
+          "model": "cmyk",
+          "c": 0.0,
+          "m": 0.0,
+          "y": 0.0,
+          "k": 1.0
+        },
+        "stroke": null,
+        "follow": {
+          "fill": true,
+          "outline": false
+        }
+      },
+      "paragraph": {
+        "leading_pct": 100.0,
+        "leading_unit": "percent_char_height",
+        "char_spacing_pct": 0.0,
+        "word_spacing_pct": 100.0,
+        "space_before": 0.0,
+        "space_after": 0.0,
+        "first_line_indent": 0.0,
+        "left_indent": 0.0,
+        "right_indent": 0.0,
+        "columns": 1,
+        "gutter": 5.0,
+        "bullets": false,
+        "bullet_char": "•",
+        "bullet_indent": 5.0,
+        "drop_cap_lines": 0,
+        "tabs": [],
+        "hyphenate": false,
+        "fit_to_frame": false,
+        "baseline_grid_mm": 0.0,
+        "vertical_align": "top"
+      }
+    }
+  },
+  "autocorrect": {
+    "enabled": true,
+    "capitalize_sentences": true,
+    "fix_two_initial_capitals": true,
+    "capitalize_days": false,
+    "auto_hyperlinks": false,
+    "quote_language": "",
+    "typographic_quotes": true,
+    "straight_after_numbers": false,
+    "single_quotes": null,
+    "double_quotes": null,
+    "replace_while_typing": true,
+    "replacements": [
+      [
+        "(c)",
+        "©"
+      ],
+      [
+        "(r)",
+        "®"
+      ],
+      [
+        "(tm)",
+        "™"
+      ],
+      [
+        "1/2",
+        "½"
+      ],
+      [
+        "1/4",
+        "¼"
+      ],
+      [
+        "3/4",
+        "¾"
+      ]
+    ]
+  },
+  "spelling": {
+    "ignore_digits": false,
+    "ignore_capitals": false,
+    "add_to_autocorrect": false,
+    "dictionary_folder": null,
+    "disabled_dictionaries": [],
+    "downloaded_dictionaries": [],
+    "hyphenation_patterns": ""
+  },
+  "thesaurus_file": null,
+  "show_new_document_dialog": true,
+  "show_scrollbars": true,
+  "new_document": {
+    "preset": "default",
+    "pages": 1,
+    "values": {
+      "rgb": false,
+      "page_size": "A4",
+      "width_mm": 210.0,
+      "height_mm": 297.0,
+      "units": "mm",
+      "dpi": 300.0
+    },
+    "rgb_profile": "sRGB IEC61966-2.1",
+    "cmyk_profile": "Generic CMYK (open)",
+    "gray_profile": "Dot Gain 20%",
+    "intent": "Relative colorimetric",
+    "saved_presets": []
+  },
+  "desktop_rgb": [
+    255,
+    255,
+    255
+  ],
+  "desktop_custom": false,
+  "status_info": "ToolHints",
+  "toolbox_hidden": [],
+  "button_size": "small",
+  "fit_page_margin": 0.0,
+  "fit_page_preview": true,
+  "toolbox_button_size": null,
+  "toolbox_captions": "image_only",
+  "ui_size": 0.0,
+  "show_splash": true,
+  "hardware_acceleration": true,
+  "gpu_adapter": "",
+  "working_renderer": "",
+  "system_title_bar": false,
+  "center_dialogs": true,
+  "ui_shadows": true,
+  "colored_icons": false,
+  "theme": "",
+  "bars": {
+    "toolbox": "left",
+    "palette": "bottom",
+    "standard": "top",
+    "property": "top",
+    "status": "bottom",
+    "toolbox_pos": [
+      120.0,
+      160.0
+    ],
+    "palette_pos": [
+      300.0,
+      600.0
+    ],
+    "standard_pos": [
+      200.0,
+      140.0
+    ],
+    "property_pos": [
+      200.0,
+      200.0
+    ],
+    "text": "top",
+    "zoom": "top",
+    "transform": "top",
+    "time_tracker": "top",
+    "floating_pos": {},
+    "rows": {},
+    "locked": false,
+    "version": 2
+  },
+  "bar_items": {},
+  "window_maximized": false,
+  "window_size": [
+    1600.0,
+    950.0
+  ],
+  "startup": "welcome_screen",
+  "undo_levels": 150,
+  "show_tooltips": true,
+  "font_manager": {
+    "folders": [],
+    "installed": [],
+    "favorites": [],
+    "collections": [],
+    "sample": "",
+    "sample_px": 0.0,
+    "details": false
+  },
+  "tracecut": {
+    "show": true,
+    "tool": "PlotterOutput"
+  },
+  "hide_bbox_curve_tools": false,
+  "node_tracking": false,
+  "preview_page_border": true,
+  "constrain_angle": 15.0,
+  "symmetry_show_lines": true,
+  "symmetry_full_preview": false,
+  "corners_preview": true,
+  "precision": 3,
+  "nodes": {
+    "size": "small",
+    "handles": "large",
+    "cusp": "square",
+    "smooth": "circle",
+    "symmetrical": "diamond",
+    "main_rgb": [
+      0,
+      140,
+      255
+    ],
+    "secondary_rgb": [
+      255,
+      0,
+      0
+    ],
+    "unselected_filled": true,
+    "show_direction": false,
+    "pick_distance": 6.0,
+    "object_pick_distance": 3.0,
+    "corner_widgets": true,
+    "corner_one_at_a_time": true
+  },
+  "clip_frame": {
+    "auto_center": "when_outside",
+    "empty_lines": true
+  },
+  "backup": {
+    "before_save": true,
+    "before_save_dir": null,
+    "auto": true,
+    "minutes": 20,
+    "auto_dir": null
+  },
+  "text_increment_pt": 1.0,
+  "default_tab_mm": 12.7,
+  "treat_all_filled": true,
+  "focus_visibility": 20,
+  "focus_double_click": true,
+  "comment_author": "",
+  "follow_text_size": true,
+  "follow_high_contrast": true,
+  "marquee_touching": false,
+  "upgrades": 6,
+  "crosshair_cursor": false,
+  "screen_ppi": 96.0,
+  "zoom_right_click_out": true,
+  "zoom_relative_1to1": true,
+  "wheel_zoom_centers": false,
+  "pan_right_click_out": false,
+  "palette": {
+    "auto_update_document": true,
+    "right_click_outline": true,
+    "show_no_color": true,
+    "show_document": true,
+    "show_palette": true,
+    "rows": 1,
+    "swatch_size": 20,
+    "float_size": [
+      460.0,
+      25.0
+    ]
+  },
+  "palette_bars": [],
+  "main_palette": "",
+  "tools": {
+    "polygon_points": 5,
+    "star_sharpness": 0.5,
+    "star_complex": false,
+    "complex_points": 9,
+    "complex_sharpness": 2,
+    "rect_corners": {
+      "radii": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "kind": "round",
+      "fixed": true
+    },
+    "corners_together": true,
+    "ellipse_arc": null,
+    "spiral_revolutions": 4,
+    "spiral_logarithmic": false,
+    "table_rows": 3,
+    "table_cols": 4,
+    "graph_rows": 4,
+    "graph_cols": 3,
+    "blend_steps": 20,
+    "contour": {
+      "direction": "outside",
+      "steps": 3,
+      "offset": 2.0,
+      "corners": "miter",
+      "color_blend": 0,
+      "fill_to": {
+        "model": "rgb",
+        "r": 1.0,
+        "g": 1.0,
+        "b": 1.0
+      },
+      "outline_to": {
+        "model": "rgb",
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0
+      },
+      "accel_objects": 0.0,
+      "accel_colors": 0.0
+    },
+    "eraser_width": 6.35,
+    "eraser_square": false,
+    "text_font": "Liberation Sans",
+    "text_size_pt": 24.0,
+    "text_hyphenation": false,
+    "envelope_mode": "unconstrained",
+    "envelope_mapping": "putty",
+    "envelope_keep_lines": false,
+    "mesh_rows": 2,
+    "mesh_cols": 2,
+    "smart_fill_mode": 0,
+    "smart_fill_color": {
+      "model": "cmyk",
+      "c": 0.0,
+      "m": 0.0,
+      "y": 1.0,
+      "k": 0.0
+    },
+    "smart_outline_mode": 0,
+    "smart_outline_width": 0.2,
+    "smart_outline_color": {
+      "model": "rgb",
+      "r": 0.0,
+      "g": 0.0,
+      "b": 0.0
+    },
+    "brush_radius": 10.0,
+    "roughen_amount": 2.0,
+    "brush": {
+      "smooth_rate": 20,
+      "smear_pressure": 100,
+      "twirl_speed": 50,
+      "twirl_clockwise": false,
+      "attract_speed": 50,
+      "repel": false,
+      "smudge_pressure": 100,
+      "roughen_frequency": 5
+    },
+    "dimension_style": {
+      "precision": 2,
+      "units": "",
+      "show_units": true,
+      "prefix": "",
+      "suffix": "",
+      "text_position": "above",
+      "text_size": 10.0,
+      "font": "",
+      "line_color": {
+        "model": "rgb",
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0
+      },
+      "text_color": {
+        "model": "rgb",
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0
+      },
+      "line_width": 0.0,
+      "arrows": "filled",
+      "round_ends": false,
+      "extension_gap": 0.0,
+      "extension_overshoot": 2.0,
+      "horizontal_text": false,
+      "joined": false,
+      "corner_radius": 0.0
+    },
+    "callout_style": {
+      "width": 0.0762,
+      "dash": [],
+      "head": "arrow",
+      "shape": "none",
+      "gap": 1.0
+    },
+    "distort": {
+      "mode": "pushpull",
+      "amount": 20.0,
+      "amplitude": 2.0,
+      "frequency": 6,
+      "random": false,
+      "smooth": false,
+      "local": false,
+      "tilt": 0.0,
+      "turns": 0,
+      "degrees": 90.0,
+      "clockwise": true
+    },
+    "extrude": {
+      "kind": "small_back",
+      "vector": {
+        "x": 6.0,
+        "y": 6.0
+      },
+      "depth": 20.0,
+      "vanishing": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "on_object": true,
+      "color": "object",
+      "solid": {
+        "model": "rgb",
+        "r": 0.5019608,
+        "g": 0.5019608,
+        "b": 0.5019608
+      },
+      "shade_from": {
+        "model": "rgb",
+        "r": 0.78431374,
+        "g": 0.78431374,
+        "b": 0.78431374
+      },
+      "shade_to": {
+        "model": "rgb",
+        "r": 0.15686275,
+        "g": 0.15686275,
+        "b": 0.15686275
+      },
+      "light_angle": 135.0,
+      "light_intensity": 50.0,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "elevation": 0.0,
+      "lights": [
+        [
+          false,
+          {
+            "angle": 45.0,
+            "elevation": 30.0,
+            "intensity": 50.0
+          }
+        ],
+        [
+          false,
+          {
+            "angle": 45.0,
+            "elevation": 30.0,
+            "intensity": 50.0
+          }
+        ]
+      ],
+      "bevel": 0.0
+    },
+    "connector_radius": 3.0,
+    "recognize": {
+      "recognition": 3,
+      "smoothing": 3
+    },
+    "sketch": {
+      "join_distance": 5.0,
+      "join": true,
+      "smoothing": 3
+    },
+    "knife": {
+      "mode": "two_point",
+      "gap": 0.0,
+      "one_object": false
+    },
+    "segment_freehand": false
+  },
+  "view": {
+    "grid": false,
+    "guides": true,
+    "page_border": true,
+    "page_shadow": true,
+    "bleed": false,
+    "printable_area": false,
+    "mask_outside_page": false,
+    "pixel_grid": true,
+    "baseline_grid": false,
+    "non_printing": false,
+    "proof_colors": false,
+    "simulate_overprints": false,
+    "rasterize_complex_effects": true,
+    "mode": "enhanced",
+    "grid_frequency": false
+  },
+  "panels": {
+    "color_model": "CMYK",
+    "color_views": [
+      true,
+      true,
+      false
+    ],
+    "align_to": "active",
+    "align_use_outline": false,
+    "distribute_to": "selection",
+    "distribute_gap": 1.0,
+    "shaping_op": "weld",
+    "shaping_leave": [
+      [
+        false,
+        false
+      ],
+      [
+        true,
+        false
+      ],
+      [
+        true,
+        true
+      ]
+    ]
+  },
+  "time_tracker": {
+    "show_bar": false,
+    "idle_minutes": 5
+  },
+  "preflight": {
+    "off": [],
+    "min_dpi": 200.0,
+    "max_dpi": 1200.0,
+    "min_text_pt": 5.0,
+    "rich_black_below_pt": 12.0,
+    "min_outline_mm": 0.1
+  },
+  "publish_pdf": {
+    "standard": 0,
+    "output_condition": "FOGRA39",
+    "flatten_dpi": 300.0,
+    "bookmarks": true,
+    "show_bookmarks": false,
+    "printing": "Full",
+    "copy": true,
+    "modify": true,
+    "annotate": true,
+    "fill_forms": true,
+    "assemble": true,
+    "accessibility": true,
+    "preset": "publish.preset_distribution",
+    "user_presets": [],
+    "text_as_curves": false,
+    "embed_fonts": true,
+    "embed_base14": false,
+    "subset_fonts": true,
+    "subset_below_pct": 80.0,
+    "bitmaps": {
+      "downsample_color": false,
+      "color_dpi": 300.0,
+      "downsample_gray": false,
+      "gray_dpi": 300.0,
+      "downsample_mono": false,
+      "mono_dpi": 1200.0,
+      "jpeg": false,
+      "jpeg_quality": 85,
+      "compress_content": true
+    },
+    "marks": {
+      "crop": false,
+      "registration": false,
+      "color_bars": false,
+      "file_info": false
+    }
+  },
+  "defaults": {
+    "ask": true,
+    "graphic": true,
+    "artistic_text": false,
+    "paragraph_text": false
+  },
+  "shown_bars": {
+    "standard_toolbar": true,
+    "property_bar": true,
+    "toolbox": true,
+    "status_bar": true,
+    "dockers": true,
+    "rulers": true,
+    "text_toolbar": false,
+    "zoom_toolbar": false,
+    "transform_toolbar": false
+  },
+  "dockers": {
+    "open": [
+      "docker.hints",
+      "docker.properties",
+      "docker.objects"
+    ],
+    "front": "docker.hints",
+    "left": [],
+    "left_front": "docker.hints",
+    "left_shown": false,
+    "floating": []
+  },
+  "recent_fonts": [],
+  "show_recent_fonts": true,
+  "recent_font_count": 5,
+  "properties_closed": [],
+  "text_sections_closed": [],
+  "text_docker_from": 0,
+  "text_docker_checks": false,
+  "text_docker_ticked": [],
+  "recent_glyphs": [],
+  "custom_hyphens": [],
+  "hyphens_when_typing": true,
+  "hyphens_when_pasting": true,
+  "object_thumb_size": 20.0,
+  "master_in_front": [
+    false,
+    false,
+    false
+  ],
+  "objects_all_pages": true,
+  "font_sample_px": 18.0,
+  "workspace_parts": {
+    "shortcuts": true,
+    "bars": true,
+    "palette": true,
+    "appearance": true
+  },
+  "printing": {
+    "fit_to_page": false,
+    "separations": false,
+    "bleed": false,
+    "crop_marks": false,
+    "registration_marks": false,
+    "color_bars": false,
+    "densitometer": false,
+    "page_info": false,
+    "sheet": 0,
+    "landscape": false,
+    "gutter": 5.0,
+    "gutter_y": null,
+    "layout_presets": [],
+    "remember_last": false,
+    "preflight": true,
+    "destination": 0,
+    "printer": null,
+    "orientation": 0,
+    "collate": true,
+    "grayscale": false,
+    "reverse_order": false,
+    "spot_to_cmyk": false,
+    "text_black": false,
+    "page_background": true,
+    "overprint_black": false,
+    "bleed_limit": 4.0,
+    "page_numbers": false,
+    "ps_level": 2,
+    "keep_size": false,
+    "sheet_presets": [],
+    "custom_sheet": {
+      "width": 210.0,
+      "height": 297.0
+    }
+  },
+  "formats": {
+    "export_presets": [],
+    "export_format": 0,
+    "export_dpi": 300.0,
+    "export_quality": 90,
+    "export_webp_lossless": false,
+    "export_transparent": true,
+    "pdf_standard": 0,
+    "output_condition": "FOGRA39",
+    "pdf_bleed_mm": 0.0,
+    "export_size_unit": 0,
+    "export_scale": 1.0,
+    "export_color_mode": 0,
+    "export_by_format": [],
+    "remember_last": true,
+    "import_place": "as_in_file",
+    "import_with_cursor": true,
+    "cdr_version": 27,
+    "save_new_as_cdr": false,
+    "skip_export_dialog": false,
+    "pdf_text_as_curves": false,
+    "pdf_ask_text": true,
+    "pdf_reduce_pictures": false
+  },
+  "ai": {
+    "provider": "anthropic",
+    "endpoint": "",
+    "model": "",
+    "key": "",
+    "remember_key": false,
+    "show_bar": true,
+    "image_model": ""
+  },
+  "ai_enabled": true,
+  "mcp_window": false,
+  "check_updates": false,
+  "update_check_asked": true,
+  "last_update_check": 0,
+  "skipped_update": "",
+  "pending_update": "",
+  "script_filters": [],
+  "github": {
+    "repo": "",
+    "branch": "main",
+    "path": "",
+    "token": "",
+    "remember_token": false
+  },
+  "tracing": {
+    "quick_preset": "optimized",
+    "remove_background": true,
+    "delete_original": false
+  },
+  "warnings": {
+    "unread_objects": true,
+    "missing_fonts": true,
+    "ask_missing_fonts": true,
+    "shelf_remove": true
+  },
+  "curves": {
+    "smoothing": 50,
+    "join_px": 5.0,
+    "pen_preview": true,
+    "pen_auto_add_delete": true,
+    "constrain_key": "ctrl",
+    "pen_pressure": true,
+    "pen_ignores_hand": true
+  },
+  "show_text_frames": true,
+  "path_tick_snap": false,
+  "path_tick_mm": 1.0,
+  "screen_margins": {
+    "follow_system": true,
+    "top": 0.0,
+    "bottom": 0.0,
+    "left": 0.0,
+    "right": 0.0,
+    "linked": false,
+    "corner_radius": 0.0
+  }
+}

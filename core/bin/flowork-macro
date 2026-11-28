@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""
+flowork-macro — Semantic Macro Recorder & Deterministic Replay Engine
+Stores and replays semantic UI workflows (AT-SPI2 spatial_graph + shell steps)
+as portable JSON macros instead of fragile raw screen coordinates.
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SPATIAL_GRAPH_BIN = "/opt/floworkos/bin/flowork-spatial-graph"
+DEFAULT_MACRO_DIR = Path("/opt/floworkos/macros")
+USER_MACRO_DIR = Path.home() / ".flowork" / "macros"
+
+
+def get_macro_dir(write: bool = False) -> Path:
+    if write:
+        try:
+            DEFAULT_MACRO_DIR.mkdir(parents=True, exist_ok=True)
+            test_file = DEFAULT_MACRO_DIR / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            return DEFAULT_MACRO_DIR
+        except OSError:
+            USER_MACRO_DIR.mkdir(parents=True, exist_ok=True)
+            return USER_MACRO_DIR
+    if DEFAULT_MACRO_DIR.exists():
+        return DEFAULT_MACRO_DIR
+    USER_MACRO_DIR.mkdir(parents=True, exist_ok=True)
+    return USER_MACRO_DIR
+
+
+def find_macro_file(name: str) -> Path | None:
+    fname = name if name.endswith(".json") else f"{name}.json"
+    for d in (DEFAULT_MACRO_DIR, USER_MACRO_DIR):
+        p = d / fname
+        if p.is_file():
+            return p
+    return None
+
+
+def cmd_list(args):
+    macros = []
+    for d in (DEFAULT_MACRO_DIR, USER_MACRO_DIR):
+        if d.exists():
+            for p in sorted(d.glob("*.json")):
+                try:
+                    data = json.loads(p.read_text(encoding="utf-8"))
+                    macros.append({
+                        "name": p.stem,
+                        "path": str(p),
+                        "steps": len(data.get("steps", [])),
+                        "description": data.get("description", ""),
+                    })
+                except Exception:
+                    pass
+    if args.json:
+        print(json.dumps(macros, indent=2))
+    else:
+        if not macros:
+            print("No semantic macros found.")
+            return
+        print("=== FLOWORK SEMANTIC MACROS ===")
+        for m in macros:
+            print(f"  - {m['name']} ({m['steps']} steps): {m['description']}")
+
+
+def cmd_create(args):
+    try:
+        steps = json.loads(args.steps)
+        if not isinstance(steps, list):
+            raise ValueError("steps must be a JSON array")
+    except Exception as e:
+        print(f"Error parsing --steps JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    macro_dir = get_macro_dir(write=True)
+    out_path = macro_dir / f"{args.name}.json"
+    payload = {
+        "name": args.name,
+        "description": args.description or "",
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "steps": steps,
+    }
+    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"Saved semantic macro '{args.name}' ({len(steps)} steps) -> {out_path}")
+
+
+def cmd_show(args):
+    p = find_macro_file(args.name)
+    if not p:
+        print(f"Macro not found: {args.name}", file=sys.stderr)
+        sys.exit(1)
+    print(p.read_text(encoding="utf-8"))
+
+
+def cmd_run(args):
+    p = find_macro_file(args.name)
+    if not p:
+        print(f"Macro not found: {args.name}", file=sys.stderr)
+        sys.exit(1)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    steps = data.get("steps", [])
+    print(f"Running semantic macro '{args.name}' ({len(steps)} steps, dry_run={args.dry_run})...")
+
+    for idx, step in enumerate(steps, 1):
+        action = step.get("action", "")
+        if action == "sleep":
+            secs = float(step.get("seconds", 0.5))
+            print(f"  [{idx}/{len(steps)}] sleep {secs}s")
+            if not args.dry_run:
+                time.sleep(secs)
+        elif action == "shell":
+            cmd = step.get("command", "")
+            print(f"  [{idx}/{len(steps)}] shell: {cmd}")
+            if not args.dry_run and cmd:
+                subprocess.run(cmd, shell=True, check=True)
+        elif action in ("click", "type"):
+            app = step.get("app", "")
+            target = step.get("target", "")
+            text = step.get("text", "")
+            print(f"  [{idx}/{len(steps)}] spatial_graph {action} app={app!r} target={target!r}")
+            if not args.dry_run:
+                cmd = [SPATIAL_GRAPH_BIN, action, "--target", target]
+                if app:
+                    cmd.extend(["--app", app])
+                if action == "type" and text:
+                    cmd.extend(["--text", text])
+                subprocess.run(cmd, check=True)
+        else:
+            print(f"  [{idx}/{len(steps)}] unknown action '{action}', skipping")
+
+    print("Macro execution complete.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Semantic Macro Recorder & Replay")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_list = sub.add_parser("list", help="List saved semantic macros")
+    p_list.add_argument("--json", action="store_true", help="Output JSON")
+    p_list.set_defaults(func=cmd_list)
+
+    p_create = sub.add_parser("create", help="Create a semantic macro")
+    p_create.add_argument("name", help="Macro name")
+    p_create.add_argument("--description", default="", help="Macro description")
+    p_create.add_argument("--steps", required=True, help="JSON array of semantic steps")
+    p_create.set_defaults(func=cmd_create)
+
+    p_show = sub.add_parser("show", help="Show macro JSON")
+    p_show.add_argument("name", help="Macro name")
+    p_show.set_defaults(func=cmd_show)
+
+    p_run = sub.add_parser("run", help="Replay a semantic macro")
+    p_run.add_argument("name", help="Macro name")
+    p_run.add_argument("--dry-run", action="store_true", help="Simulate replay without executing")
+    p_run.set_defaults(func=cmd_run)
+
+    p_play = sub.add_parser("play", help="Replay a semantic macro (alias for run)")
+    p_play.add_argument("name", help="Macro name")
+    p_play.add_argument("--dry-run", action="store_true", help="Simulate replay without executing")
+    p_play.set_defaults(func=cmd_run)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

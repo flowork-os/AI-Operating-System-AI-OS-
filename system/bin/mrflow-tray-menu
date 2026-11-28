@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# MrFlow Desktop Header Systray Launcher (Dynamic Path Resolution)
+# Zero-Hardcode Path Doctrine across ISO, Live Boot, and Multi-User Environments.
+# ==============================================================================
+
+if [ -f "/opt/floworkos/connector/bin/mrflow-tray-menu.py" ]; then
+    BASE_DIR="/opt/floworkos/connector"
+elif [ -n "$MRFLOW_CONNECTOR_DIR" ] && [ -f "$MRFLOW_CONNECTOR_DIR/bin/mrflow-tray-menu.py" ]; then
+    BASE_DIR="$MRFLOW_CONNECTOR_DIR"
+elif [ -n "$FLOWORK_CONNECTOR_DIR" ] && [ -f "$FLOWORK_CONNECTOR_DIR/bin/mrflow-tray-menu.py" ]; then
+    BASE_DIR="$FLOWORK_CONNECTOR_DIR"
+elif [ -f "$HOME/connector/bin/mrflow-tray-menu.py" ]; then
+    BASE_DIR="$HOME/connector"
+elif [ -f "/opt/floworkos/apps/connector/bin/mrflow-tray-menu.py" ]; then
+    BASE_DIR="/opt/floworkos/apps/connector"
+else
+    USER_DIR="$(eval echo ~$USER)/connector"
+    if [ -f "$USER_DIR/bin/mrflow-tray-menu.py" ]; then
+        BASE_DIR="$USER_DIR"
+    else
+        echo "[MrFlow Tray] Error: mrflow-tray-menu.py not found in standard paths." >&2
+        exit 1
+    fi
+fi
+
+exec python3 "$BASE_DIR/bin/mrflow-tray-menu.py" "$@"

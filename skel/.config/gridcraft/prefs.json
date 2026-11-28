@@ -1,0 +1,31 @@
+{
+  "enterDirection": "down",
+  "autocomplete": true,
+  "userName": "GridCraft User",
+  "defaultFont": "Calibri",
+  "defaultFontSize": 11.0,
+  "sheetsInNewWorkbook": 1,
+  "r1c1": false,
+  "userDictionary": [],
+  "formulaBar": true,
+  "statusBar": {
+    "average": true,
+    "count": true,
+    "numericalCount": false,
+    "minimum": false,
+    "maximum": false,
+    "sum": true
+  },
+  "recentFunctions": [
+    "SUM",
+    "AVERAGE",
+    "IF",
+    "COUNT",
+    "MAX",
+    "MIN",
+    "SUMIF",
+    "XLOOKUP",
+    "PMT",
+    "TODAY"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "skill": "drachin-suno-producer",
+  "version": "1.0.0",
+  "read_only_paths": [
+    "/opt/floworkos/skills/drachin-suno-producer",
+    "/usr/bin",
+    "/usr/local/bin",
+    "/usr/lib",
+    "/lib",
+    "/etc/ssl"
+  ],
+  "read_write_paths": [
+    "$HOME/Music",
+    "$HOME/Downloads",
+    "/tmp/suno_phase1",
+    "/tmp/drachin_videos.txt"
+  ],
+  "network": {
+    "allow_outbound": true,
+    "ports": [80, 443, 9299]
+  }
+}

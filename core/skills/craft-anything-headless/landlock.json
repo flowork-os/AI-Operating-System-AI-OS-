@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "description": "Least-privilege Landlock LSM permissions for craft-anything-headless skill",
+  "read_only_paths": [
+    "/opt/floworkos/bin",
+    "/opt/floworkos/share/doc/craft-anything",
+    "/opt/floworkos/skills/craft-anything-headless",
+    "/usr/bin",
+    "/usr/lib",
+    "/lib",
+    "/lib64"
+  ],
+  "read_write_paths": [
+    "/opt/floworkos/documents",
+    "/home/mrflow/.config/craft-anything",
+    "/home/mrflow/.local/share/craft-anything",
+    "/tmp",
+    "/dev/shm"
+  ],
+  "network_ports": []
+}

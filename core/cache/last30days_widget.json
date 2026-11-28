@@ -1,0 +1,54 @@
+{
+  "updated_at": "00:40:42",
+  "updated_date": "25 Nov 2026",
+  "stories": [
+    {
+      "title": "Per Arm's request, this site will be discontinued on 4 December 2026 :(",
+      "points": 1138,
+      "comments": 273,
+      "url": "https://news.ycombinator.com/item?id=50617499",
+      "id": "50617499"
+    },
+    {
+      "title": "2035 came early",
+      "points": 777,
+      "comments": 292,
+      "url": "https://news.ycombinator.com/item?id=50624497",
+      "id": "50624497"
+    },
+    {
+      "title": "New York Bans Subscription and Post-Purchase Fees on Cars",
+      "points": 701,
+      "comments": 335,
+      "url": "https://news.ycombinator.com/item?id=50622774",
+      "id": "50622774"
+    },
+    {
+      "title": "Stalwart is now a drop-in replacement for Microsoft Exchange",
+      "points": 646,
+      "comments": 326,
+      "url": "https://news.ycombinator.com/item?id=50620349",
+      "id": "50620349"
+    },
+    {
+      "title": "LLM agents work for their parent companies, not for you",
+      "points": 630,
+      "comments": 260,
+      "url": "https://news.ycombinator.com/item?id=50627340",
+      "id": "50627340"
+    },
+    {
+      "title": "Apple removed my open-source app from EU App Stores after 9 years",
+      "points": 607,
+      "comments": 152,
+      "url": "https://news.ycombinator.com/item?id=50616933",
+      "id": "50616933"
+    }
+  ],
+  "featured_quote": {
+    "quote": "I don’t think the ARM architecture documentation can be considered a factual, published work. It describes the choices they made in designing the ISA, not facts that exists independently of their work.",
+    "author": "NetMageSCW",
+    "source": "Hacker News",
+    "url": "https://news.ycombinator.com/item?id=50629556"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Flowork OS",
+  "version": "7.3.1",
+  "commit": "ae93dca799e029e0d7fa2b62dac808a2337185b4",
+  "branch": "main",
+  "remote_url": "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git",
+  "last_updated": "2026-11-28T11:09:59Z",
+  "channel": "stable",
+  "manifest_id": "bb124038b2f47e0bc9f934e92010756ddaee274ff718a875963cf8935ec986db",
+  "git_commit": "6e7f0a29",
+  "last_push": "2026-11-28T16:20:15+0700",
+  "timestamp": 1795857615
+}

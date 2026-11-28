@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+"""
+flowork-manifest-check — Sovereign App, Binary, Skill & ISO Manifest Validator
+Validates Flowork OS canonical paths, .desktop entries, symlinks, skills,
+systemd units, and ISO builder squashfs inclusion rules.
+"""
+
+import argparse
+import json
+import os
+import re
+import shlex
+import shutil
+import sys
+from pathlib import Path
+
+APPS_DIR = Path("/opt/floworkos/apps")
+BIN_DIR = Path("/opt/floworkos/bin")
+SKILLS_DIR = Path("/opt/floworkos/skills")
+USR_LOCAL_BIN = Path("/usr/local/bin")
+USR_SHARE_APPS = Path("/usr/share/applications")
+ISO_BUILDER = Path("/opt/floworkos/iso-builder/build-live-iso.sh")
+SYSTEMD_DIR = Path("/etc/systemd/system")
+
+
+class AuditReport:
+    def __init__(self):
+        self.errors = []
+        self.warnings = []
+        self.fixed = []
+        self.stats = {}
+
+    def add_error(self, category: str, target: str, message: str):
+        self.errors.append({"category": category, "target": target, "message": message})
+
+    def add_warning(self, category: str, target: str, message: str):
+        self.warnings.append({"category": category, "target": target, "message": message})
+
+    def add_fixed(self, category: str, target: str, message: str):
+        self.fixed.append({"category": category, "target": target, "message": message})
+
+    def to_dict(self):
+        return {
+            "status": "PASS" if not self.errors else "FAIL",
+            "stats": self.stats,
+            "errors": self.errors,
+            "warnings": self.warnings,
+            "fixed": self.fixed,
+        }
+
+
+def resolve_exec_binary(exec_line: str) -> str | None:
+    """Extract the executable path/name from a .desktop Exec= line."""
+    # Strip field codes like %U, %F, %u, %f
+    cleaned = re.sub(r"%[fFuUdDnNickvm]", "", exec_line).strip()
+    if not cleaned:
+        return None
+    try:
+        parts = shlex.split(cleaned)
+    except ValueError:
+        parts = cleaned.split()
+    if not parts:
+        return None
+    # Skip env wrappers like `env VAR=1 cmd`
+    idx = 0
+    if parts[0] == "env":
+        idx = 1
+        while idx < len(parts) and "=" in parts[idx]:
+            idx += 1
+    return parts[idx] if idx < len(parts) else None
+
+
+def check_desktop_entries(report: AuditReport, auto_fix: bool = False):
+    if not APPS_DIR.exists():
+        report.add_error("apps", str(APPS_DIR), "Canonical apps directory missing")
+        return
+
+    desktop_files = sorted(APPS_DIR.glob("*.desktop"))
+    report.stats["apps_desktop_count"] = len(desktop_files)
+
+    for df in desktop_files:
+        try:
+            content = df.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            report.add_error("desktop", str(df), f"Cannot read file: {e}")
+            continue
+
+        exec_match = re.search(r"^Exec=(.+)$", content, re.MULTILINE)
+        if not exec_match:
+            report.add_error("desktop", str(df), "Missing Exec= entry")
+        else:
+            bin_target = resolve_exec_binary(exec_match.group(1))
+            if bin_target:
+                if bin_target.startswith("/"):
+                    if not os.path.exists(bin_target):
+                        report.add_error("desktop_exec", str(df), f"Exec target missing: {bin_target}")
+                    elif not os.access(bin_target, os.X_OK):
+                        report.add_warning("desktop_exec", str(df), f"Exec target not executable: {bin_target}")
+                else:
+                    if not shutil.which(bin_target):
+                        report.add_warning("desktop_exec", str(df), f"Exec command not in PATH: {bin_target}")
+
+        # Check sync to /usr/share/applications/
+        sys_df = USR_SHARE_APPS / df.name
+        if not sys_df.exists() and not sys_df.is_symlink():
+            if auto_fix:
+                try:
+                    os.symlink(df, sys_df)
+                    report.add_fixed("desktop_sync", str(sys_df), f"Created symlink -> {df}")
+                except OSError as e:
+                    report.add_warning("desktop_sync", str(df), f"Not synced to {USR_SHARE_APPS} (fix failed: {e})")
+            else:
+                report.add_warning("desktop_sync", str(df), f"Not synced to {USR_SHARE_APPS}")
+        elif sys_df.is_symlink() and not sys_df.exists():
+            if auto_fix:
+                try:
+                    sys_df.unlink()
+                    os.symlink(df, sys_df)
+                    report.add_fixed("desktop_sync", str(sys_df), f"Repaired broken symlink -> {df}")
+                except OSError as e:
+                    report.add_error("desktop_sync", str(sys_df), f"Broken symlink (fix failed: {e})")
+            else:
+                report.add_error("desktop_sync", str(sys_df), "Broken symlink in /usr/share/applications")
+
+
+def check_bin_directory(report: AuditReport, auto_fix: bool = False):
+    if not BIN_DIR.exists():
+        report.add_error("bin", str(BIN_DIR), "Canonical bin directory missing")
+        return
+
+    entries = sorted(BIN_DIR.iterdir())
+    report.stats["bin_count"] = len(entries)
+
+    for entry in entries:
+        if entry.is_symlink() and not entry.exists():
+            report.add_error("bin_symlink", str(entry), f"Broken symlink -> {os.readlink(entry)}")
+            continue
+        if entry.is_file():
+            if entry.stat().st_size == 0:
+                report.add_error("bin_empty", str(entry), "0-byte empty file in /opt/floworkos/bin")
+            elif not os.access(entry, os.X_OK):
+                if auto_fix:
+                    try:
+                        os.chmod(entry, entry.stat().st_mode | 0o111)
+                        report.add_fixed("bin_perm", str(entry), "Added executable permission (+x)")
+                    except OSError as e:
+                        report.add_warning("bin_perm", str(entry), f"Not executable (fix failed: {e})")
+                else:
+                    report.add_warning("bin_perm", str(entry), "File in /opt/floworkos/bin is not executable")
+
+
+def check_usr_local_bin(report: AuditReport):
+    if not USR_LOCAL_BIN.exists():
+        return
+    broken = 0
+    total = 0
+    for entry in sorted(USR_LOCAL_BIN.iterdir()):
+        total += 1
+        if entry.is_symlink() and not entry.exists():
+            broken += 1
+            report.add_error("usr_local_bin", str(entry), f"Broken symlink -> {os.readlink(entry)}")
+    report.stats["usr_local_bin_count"] = total
+    report.stats["usr_local_bin_broken"] = broken
+
+
+def check_skills(report: AuditReport):
+    if not SKILLS_DIR.exists():
+        report.add_warning("skills", str(SKILLS_DIR), "Skills directory missing")
+        return
+    skill_dirs = [d for d in sorted(SKILLS_DIR.iterdir()) if d.is_dir() and not d.name.startswith(".")]
+    report.stats["skills_count"] = len(skill_dirs)
+    for sd in skill_dirs:
+        if not (sd / "SKILL.md").is_file():
+            report.add_warning("skills", str(sd), "Missing SKILL.md manifest")
+
+
+def check_systemd_units(report: AuditReport):
+    if not SYSTEMD_DIR.exists():
+        return
+    units = sorted(SYSTEMD_DIR.glob("flowork*.service"))
+    report.stats["systemd_units_count"] = len(units)
+    for unit in units:
+        try:
+            content = unit.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for match in re.finditer(r"^ExecStart=(.+)$", content, re.MULTILINE):
+            cmd = match.group(1).strip().lstrip("-@+!")
+            bin_target = resolve_exec_binary(cmd)
+            if bin_target and bin_target.startswith("/") and not os.path.exists(bin_target):
+                report.add_error("systemd", str(unit), f"ExecStart target missing: {bin_target}")
+
+
+def check_iso_builder(report: AuditReport):
+    if not ISO_BUILDER.is_file():
+        report.add_warning("iso_builder", str(ISO_BUILDER), "ISO builder script not found")
+        return
+    content = ISO_BUILDER.read_text(encoding="utf-8", errors="replace")
+    critical_paths = [
+        "opt/floworkos/bin",
+        "opt/floworkos/apps",
+        "opt/floworkos/skills",
+        "usr/local/bin",
+        "usr/share/applications",
+    ]
+    excluded = []
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("-e "):
+            excl_target = stripped[3:].rstrip(" \\\"'")
+            for cp in critical_paths:
+                if excl_target == cp or excl_target == f"{cp}/" or excl_target == f"{cp}/*":
+                    excluded.append(cp)
+                    report.add_error("iso_exclusion", str(ISO_BUILDER), f"Critical path excluded in mksquashfs: {cp}")
+    report.stats["iso_critical_paths_ok"] = len(excluded) == 0
+
+
+def print_human_report(report: AuditReport, quiet: bool = False):
+    use_color = sys.stdout.isatty()
+    GREEN = "\033[92m" if use_color else ""
+    YELLOW = "\033[93m" if use_color else ""
+    RED = "\033[91m" if use_color else ""
+    CYAN = "\033[96m" if use_color else ""
+    RESET = "\033[0m" if use_color else ""
+    BOLD = "\033[1m" if use_color else ""
+
+    if not quiet:
+        print(f"{BOLD}{CYAN}=== FLOWORK OS SOVEREIGN MANIFEST VALIDATOR ==={RESET}")
+        print(
+            f"Scanned: {report.stats.get('bin_count', 0)} bins | "
+            f"{report.stats.get('apps_desktop_count', 0)} .desktop apps | "
+            f"{report.stats.get('skills_count', 0)} skills | "
+            f"{report.stats.get('usr_local_bin_count', 0)} /usr/local/bin | "
+            f"{report.stats.get('systemd_units_count', 0)} systemd units"
+        )
+        print()
+
+    if report.fixed:
+        print(f"{GREEN}{BOLD}[FIXED: {len(report.fixed)}]{RESET}")
+        for item in report.fixed:
+            print(f"  {GREEN}✓{RESET} [{item['category']}] {item['target']}: {item['message']}")
+        print()
+
+    if report.errors:
+        print(f"{RED}{BOLD}[ERRORS: {len(report.errors)}]{RESET}")
+        for item in report.errors:
+            print(f"  {RED}✗{RESET} [{item['category']}] {item['target']}: {item['message']}")
+        print()
+
+    if report.warnings and not quiet:
+        print(f"{YELLOW}{BOLD}[WARNINGS: {len(report.warnings)}]{RESET}")
+        for item in report.warnings:
+            print(f"  {YELLOW}!{RESET} [{item['category']}] {item['target']}: {item['message']}")
+        print()
+
+    status_color = GREEN if not report.errors else RED
+    status_text = "PASS" if not report.errors else "FAIL"
+    print(
+        f"{BOLD}Result: {status_color}{status_text}{RESET} "
+        f"(Errors: {len(report.errors)}, Warnings: {len(report.warnings)}, Fixed: {len(report.fixed)})"
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Sovereign App & ISO Manifest Validator")
+    parser.add_argument("--check", action="store_true", help="Perform read-only manifest check (default)")
+    parser.add_argument("--json", action="store_true", help="Output structured JSON report")
+    parser.add_argument("--fix", action="store_true", help="Auto-repair safe symlink and permission issues")
+    parser.add_argument("--strict", action="store_true", help="Exit with code 1 if any errors are detected")
+    parser.add_argument("--quiet", action="store_true", help="Suppress warnings and banner")
+    args = parser.parse_args()
+
+    report = AuditReport()
+    check_desktop_entries(report, auto_fix=args.fix)
+    check_bin_directory(report, auto_fix=args.fix)
+    check_usr_local_bin(report)
+    check_skills(report)
+    check_systemd_units(report)
+    check_iso_builder(report)
+
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print_human_report(report, quiet=args.quiet)
+
+    if args.strict and report.errors:
+        sys.exit(1)
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

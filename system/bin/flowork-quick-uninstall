@@ -1,0 +1,542 @@
+#!/usr/bin/env python3
+"""
+Flowork OS Quick Uninstaller
+Direct, practical right-click uninstaller for Whisker Menu without opening App Manager.
+"""
+import sys
+import os
+import re
+import shutil
+import subprocess
+import threading
+import configparser
+
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, GLib, Gdk
+
+PROTECTED_PACKAGES = {
+    "alacritty",
+    "apt",
+    "base-files",
+    "base-passwd",
+    "bash",
+    "blender",
+    "calamares",
+    "cinnamon",
+    "cinnamon-control-center",
+    "cinnamon-screensaver",
+    "cinnamon-settings-daemon",
+    "code",
+    "coreutils",
+    "dash",
+    "dbus",
+    "debianutils",
+    "diffutils",
+    "dpkg",
+    "e2fsprogs",
+    "eog",
+    "evince",
+    "feh",
+    "file-roller",
+    "findutils",
+    "flameshot",
+    "flowork-app-manager",
+    "flowork-connector",
+    "flowork-sysd",
+    "gcc-base",
+    "gimp",
+    "gkbd-capplet",
+    "gnome-calculator",
+    "gnome-screenshot",
+    "gnome-system-monitor",
+    "gnome-text-editor",
+    "google-chrome-stable",
+    "grep",
+    "gzip",
+    "hostname",
+    "hwloc",
+    "imagemagick-6.q16",
+    "init",
+    "init-system-helpers",
+    "kded5",
+    "kdialog",
+    "kio",
+    "libc-bin",
+    "libc6",
+    "libkf5guiaddons-data",
+    "libkf5wallet-bin",
+    "libstdc++6",
+    "lightdm",
+    "login",
+    "mount",
+    "mpv",
+    "muffin",
+    "ncurses-base",
+    "ncurses-bin",
+    "nemo",
+    "network-manager",
+    "network-manager-gnome",
+    "nvidia-settings",
+    "passwd",
+    "pavucontrol",
+    "perl-base",
+    "picom",
+    "pipewire",
+    "plank",
+    "procps",
+    "pulseaudio",
+    "python3.12",
+    "qemu-system-data",
+    "qsynth",
+    "rofi",
+    "sed",
+    "sudo",
+    "systemd",
+    "systemd-sysv",
+    "tar",
+    "thunar",
+    "ubuntu-minimal",
+    "util-linux",
+    "vlc",
+    "wireshark",
+    "xdg-desktop-portal-gtk",
+    "xfce4-notifyd",
+    "xfce4-panel",
+    "xfce4-session",
+    "xfce4-settings",
+    "xfce4-whiskermenu-plugin",
+    "xfdesktop4",
+    "xfwm4",
+    "xorg",
+    "xserver-xorg",
+    "yelp",
+    "zenity",
+    "zlib1g",
+}
+
+PROTECTED_DESKTOP_IDS = {
+    "Alacritty.desktop",
+    "CutVii.desktop",
+    "agent.desktop",
+    "audacity.desktop",
+    "blender.desktop",
+    "calamares.desktop",
+    "cinnamon-color-panel.desktop",
+    "cinnamon-display-panel.desktop",
+    "cinnamon-killer-daemon.desktop",
+    "cinnamon-menu-editor.desktop",
+    "cinnamon-network-panel.desktop",
+    "cinnamon-onscreen-keyboard.desktop",
+    "cinnamon-settings-actions.desktop",
+    "cinnamon-settings-applets.desktop",
+    "cinnamon-settings-backgrounds.desktop",
+    "cinnamon-settings-calendar.desktop",
+    "cinnamon-settings-default.desktop",
+    "cinnamon-settings-desklets.desktop",
+    "cinnamon-settings-desktop.desktop",
+    "cinnamon-settings-effects.desktop",
+    "cinnamon-settings-extensions.desktop",
+    "cinnamon-settings-fonts.desktop",
+    "cinnamon-settings-general.desktop",
+    "cinnamon-settings-gestures.desktop",
+    "cinnamon-settings-hotcorner.desktop",
+    "cinnamon-settings-info.desktop",
+    "cinnamon-settings-keyboard.desktop",
+    "cinnamon-settings-mouse.desktop",
+    "cinnamon-settings-notifications.desktop",
+    "cinnamon-settings-panel.desktop",
+    "cinnamon-settings-power.desktop",
+    "cinnamon-settings-privacy.desktop",
+    "cinnamon-settings-screensaver.desktop",
+    "cinnamon-settings-sound.desktop",
+    "cinnamon-settings-startup.desktop",
+    "cinnamon-settings-themes.desktop",
+    "cinnamon-settings-tiling.desktop",
+    "cinnamon-settings-universal-access.desktop",
+    "cinnamon-settings-user.desktop",
+    "cinnamon-settings-users.desktop",
+    "cinnamon-settings-windows.desktop",
+    "cinnamon-settings-workspaces.desktop",
+    "cinnamon-settings.desktop",
+    "cinnamon-wacom-panel.desktop",
+    "cinnamon-wayland.desktop",
+    "cinnamon.desktop",
+    "cinnamon2d.desktop",
+    "code.desktop",
+    "com.google.Chrome.desktop",
+    "com.microsoft.VSCode.UrlHandler.desktop",
+    "com.microsoft.VSCode.desktop",
+    "csd-automount.desktop",
+    "cursor.desktop",
+    "display-im6.q16.desktop",
+    "downflow.desktop",
+    "feh.desktop",
+    "flowork-app-manager.desktop",
+    "flowork-cleaner.desktop",
+    "flowork-computer.desktop",
+    "flowork-connector.desktop",
+    "flowork-cyber-hub.desktop",
+    "flowork-drive.desktop",
+    "flowork-ffmpeg.desktop",
+    "flowork-installer.desktop",
+    "flowork-kamidi-mastering.desktop",
+    "flowork-orbit.desktop",
+    "flowork-player.desktop",
+    "flowork-power-menu.desktop",
+    "flowork-profile.desktop",
+    "flowork-reviewflow.desktop",
+    "flowork-screenshot.desktop",
+    "flowork-settings.desktop",
+    "flowork-shutflow.desktop",
+    "flowork-stealth.desktop",
+    "flowork-studio-hub.desktop",
+    "flowork-tarot-oracle.desktop",
+    "flowork-theme-manager.desktop",
+    "flowork-wallpaper-settings.desktop",
+    "gimp.desktop",
+    "gkbd-keyboard-display.desktop",
+    "gnome-system-monitor-kde.desktop",
+    "google-chrome.desktop",
+    "google-maps-geo-handler.desktop",
+    "kamidi-mastering.desktop",
+    "ktelnetservice5.desktop",
+    "lstopo.desktop",
+    "mpv.desktop",
+    "mrflow-agent.desktop",
+    "mrflow-cli.desktop",
+    "mrflow-connector.desktop",
+    "mrflow-router.desktop",
+    "muffin.desktop",
+    "nemo-autorun-software.desktop",
+    "nemo-autostart.desktop",
+    "nemo.desktop",
+    "nm-applet.desktop",
+    "nm-connection-editor.desktop",
+    "nvidia-settings.desktop",
+    "openstreetmap-geo-handler.desktop",
+    "org.cinnamon.ScreenSaver.desktop",
+    "org.flameshot.Flameshot.desktop",
+    "org.gnome.Calculator.desktop",
+    "org.gnome.Evince-previewer.desktop",
+    "org.gnome.Evince.desktop",
+    "org.gnome.FileRoller.desktop",
+    "org.gnome.GTK4ThemeSwitcher.desktop",
+    "org.gnome.Screenshot.desktop",
+    "org.gnome.SystemMonitor.desktop",
+    "org.gnome.TextEditor.desktop",
+    "org.gnome.Zenity.desktop",
+    "org.gnome.eog.desktop",
+    "org.kde.kded5.desktop",
+    "org.kde.kdialog.desktop",
+    "org.kde.kwalletd5.desktop",
+    "org.rncbc.qsynth.desktop",
+    "org.wireshark.Wireshark.desktop",
+    "panel-desktop-handler.desktop",
+    "panel-preferences.desktop",
+    "pavucontrol.desktop",
+    "picom.desktop",
+    "plank.desktop",
+    "python3.12.desktop",
+    "qemu.desktop",
+    "qwant-maps-geo-handler.desktop",
+    "recordly.desktop",
+    "rofi-theme-selector.desktop",
+    "rofi.desktop",
+    "social-auto-upload.desktop",
+    "thunar.desktop",
+    "vlc.desktop",
+    "wheelmap-geo-handler.desktop",
+    "xdg-desktop-portal-gtk.desktop",
+    "xfce-display-settings.desktop",
+    "xfce-keyboard-settings.desktop",
+    "xfce-mouse-settings.desktop",
+    "xfce-settings-manager.desktop",
+    "xfce-ui-settings.desktop",
+    "xfce-wm-settings.desktop",
+    "xfce-wmtweaks-settings.desktop",
+    "xfce-workspaces-settings.desktop",
+    "xfce4-accessibility-settings.desktop",
+    "xfce4-color-settings.desktop",
+    "xfce4-file-manager.desktop",
+    "xfce4-mail-reader.desktop",
+    "xfce4-mime-settings.desktop",
+    "xfce4-notifyd-config.desktop",
+    "xfce4-settings-editor.desktop",
+    "xfce4-terminal-emulator.desktop",
+    "xfce4-terminal.desktop",
+    "xfce4-web-browser.desktop",
+    "yelp.desktop",
+}
+
+def parse_desktop_file(path):
+    info = {"name": "", "exec": "", "icon": ""}
+    if not path or not os.path.isfile(path):
+        return info
+    cp = configparser.ConfigParser(interpolation=None)
+    try:
+        cp.read(path, encoding="utf-8")
+        if cp.has_section("Desktop Entry"):
+            info["name"] = cp.get("Desktop Entry", "Name", fallback="")
+            info["exec"] = cp.get("Desktop Entry", "Exec", fallback="")
+            info["icon"] = cp.get("Desktop Entry", "Icon", fallback="")
+    except Exception:
+        pass
+    return info
+
+
+def resolve_target(desktop_path, app_name):
+    """Resolve a .desktop file to (kind, target_id, display_name, detail)."""
+    dinfo = parse_desktop_file(desktop_path)
+    name = app_name or dinfo["name"] or os.path.basename(desktop_path or "Application")
+    exec_cmd = dinfo["exec"]
+    icon = dinfo["icon"] or "application-x-executable"
+
+    # 1. Check Flatpak
+    if desktop_path and ("flatpak" in desktop_path or "flatpak run" in exec_cmd):
+        m = re.search(r"flatpak\s+run\s+(?:--\S+\s+)*([A-Za-z0-9_.-]+\.[A-Za-z0-9_.-]+)", exec_cmd)
+        if m:
+            return ("flatpak", m.group(1), name, f"Flatpak: {m.group(1)}", icon)
+        base = os.path.basename(desktop_path).replace(".desktop", "")
+        return ("flatpak", base, name, f"Flatpak: {base}", icon)
+
+    # 2. Check Snap
+    if desktop_path and ("/snap/" in desktop_path or "/var/lib/snapd/" in desktop_path):
+        base = os.path.basename(desktop_path).split("_")[0].replace(".desktop", "")
+        return ("snap", base, name, f"Snap: {base}", icon)
+
+    # 3. Check APT / dpkg ownership of .desktop file
+    if desktop_path and os.path.exists(desktop_path):
+        res = subprocess.run(["dpkg", "-S", desktop_path], capture_output=True, text=True)
+        if res.returncode == 0 and ":" in res.stdout:
+            pkg = res.stdout.split(":")[0].strip()
+            return ("apt", pkg, name, f"APT Package: {pkg}", icon)
+
+    # 4. Check Exec binary via dpkg -S or /opt/floworkos/apps/
+    if exec_cmd:
+        bin_token = exec_cmd.strip().split()[0].strip('"').strip("'")
+        if bin_token in ("env", "bash", "sh", "python3") and len(exec_cmd.strip().split()) > 1:
+            for tok in exec_cmd.strip().split()[1:]:
+                if not tok.startswith("-") and "=" not in tok:
+                    bin_token = tok.strip('"').strip("'")
+                    break
+
+        if "/opt/floworkos/apps/" in exec_cmd:
+            m = re.search(r"/opt/floworkos/apps/([^/\s]+)", exec_cmd)
+            if m:
+                app_dir = m.group(1)
+                return ("flowork", app_dir, name, f"Flowork App: {app_dir}", icon)
+
+        resolved_bin = shutil.which(bin_token) or bin_token
+        if resolved_bin and os.path.exists(resolved_bin):
+            res = subprocess.run(["dpkg", "-S", resolved_bin], capture_output=True, text=True)
+            if res.returncode == 0 and ":" in res.stdout:
+                pkg = res.stdout.split(":")[0].strip()
+                return ("apt", pkg, name, f"APT Package: {pkg}", icon)
+
+    # 5. Fallback: standalone .desktop launcher
+    if desktop_path and os.path.exists(desktop_path):
+        return ("desktop", desktop_path, name, f"Launcher: {os.path.basename(desktop_path)}", icon)
+
+    return ("unknown", "", name, "Unknown application source", icon)
+
+
+def is_protected(kind, target_id, desktop_path):
+    if desktop_path and os.path.basename(desktop_path) in PROTECTED_DESKTOP_IDS:
+        return True
+    if kind == "apt" and target_id in PROTECTED_PACKAGES:
+        return True
+    if kind == "flowork" and target_id in ("app-manager", "connector", "sysd"):
+        return True
+    return False
+
+
+def run_uninstall(kind, target_id, desktop_path, purge):
+    if kind == "apt":
+        cmd = ["sudo", "apt-get", "purge" if purge else "remove", "-y", target_id]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            return False, res.stderr.strip() or res.stdout.strip()
+        subprocess.run(["sudo", "apt-get", "autoremove", "-y"], capture_output=True)
+        return True, f"Package '{target_id}' uninstalled."
+
+    if kind == "flatpak":
+        cmd = ["flatpak", "uninstall", "-y"]
+        if purge:
+            cmd.append("--delete-data")
+        cmd.append(target_id)
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            return False, res.stderr.strip() or res.stdout.strip()
+        return True, f"Flatpak '{target_id}' uninstalled."
+
+    if kind == "snap":
+        cmd = ["sudo", "snap", "remove"]
+        if purge:
+            cmd.append("--purge")
+        cmd.append(target_id)
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            return False, res.stderr.strip() or res.stdout.strip()
+        return True, f"Snap '{target_id}' uninstalled."
+
+    if kind == "flowork":
+        app_path = os.path.join("/opt/floworkos/apps", target_id)
+        if os.path.isdir(app_path):
+            subprocess.run(["sudo", "rm", "-rf", app_path], check=False)
+        if desktop_path and os.path.exists(desktop_path):
+            subprocess.run(["sudo", "rm", "-f", desktop_path], check=False)
+        return True, f"Flowork app '{target_id}' removed."
+
+    if kind == "desktop":
+        if os.access(target_id, os.W_OK):
+            os.remove(target_id)
+        else:
+            subprocess.run(["sudo", "rm", "-f", target_id], check=False)
+        return True, "Application launcher removed."
+
+    return False, "Could not determine how to uninstall this application."
+
+
+def main():
+    desktop_path = sys.argv[1] if len(sys.argv) > 1 else ""
+    app_name = sys.argv[2] if len(sys.argv) > 2 else ""
+
+    kind, target_id, display_name, detail, icon_name = resolve_target(desktop_path, app_name)
+
+    if is_protected(kind, target_id, desktop_path):
+        dlg = Gtk.MessageDialog(
+            transient_for=None,
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK,
+            text=f"Cannot Uninstall {display_name}",
+        )
+        dlg.format_secondary_text(
+            f"'{display_name}' ({detail}) is a protected core system component required by Flowork OS."
+        )
+        dlg.set_position(Gtk.WindowPosition.CENTER)
+        dlg.run()
+        dlg.destroy()
+        return
+
+    if kind == "unknown":
+        dlg = Gtk.MessageDialog(
+            transient_for=None,
+            flags=0,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text=f"Cannot Uninstall {display_name}",
+        )
+        dlg.format_secondary_text("Unable to locate the package or launcher file for this application.")
+        dlg.set_position(Gtk.WindowPosition.CENTER)
+        dlg.run()
+        dlg.destroy()
+        return
+
+    # Direct confirmation dialog
+    dlg = Gtk.Dialog(title=f"Uninstall {display_name}", flags=0)
+    dlg.set_default_size(400, -1)
+    dlg.set_position(Gtk.WindowPosition.CENTER)
+    dlg.set_resizable(False)
+
+    box = dlg.get_content_area()
+    box.set_spacing(12)
+    box.set_margin_top(18)
+    box.set_margin_bottom(12)
+    box.set_margin_start(20)
+    box.set_margin_end(20)
+
+    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+    img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DIALOG)
+    hbox.pack_start(img, False, False, 0)
+
+    vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+    lbl_title = Gtk.Label()
+    lbl_title.set_markup(f"<b><big>Uninstall {GLib.markup_escape_text(display_name)}?</big></b>")
+    lbl_title.set_xalign(0)
+    lbl_detail = Gtk.Label(label=detail)
+    lbl_detail.set_xalign(0)
+    lbl_detail.get_style_context().add_class("dim-label")
+    vbox.pack_start(lbl_title, False, False, 0)
+    vbox.pack_start(lbl_detail, False, False, 0)
+    hbox.pack_start(vbox, True, True, 0)
+    box.pack_start(hbox, False, False, 0)
+
+    purge_chk = Gtk.CheckButton(label="Purge configuration and cache files")
+    if kind in ("apt", "flatpak", "snap"):
+        box.pack_start(purge_chk, False, False, 4)
+
+    dlg.add_button("Cancel", Gtk.ResponseType.CANCEL)
+    btn_uninst = dlg.add_button("Uninstall", Gtk.ResponseType.OK)
+    btn_uninst.get_style_context().add_class("destructive-action")
+
+    dlg.show_all()
+    resp = dlg.run()
+    purge = purge_chk.get_active()
+    dlg.destroy()
+
+    if resp != Gtk.ResponseType.OK:
+        return
+
+    # Progress dialog
+    prog_dlg = Gtk.Dialog(title="Uninstalling...", flags=0)
+    prog_dlg.set_default_size(340, -1)
+    prog_dlg.set_position(Gtk.WindowPosition.CENTER)
+    prog_dlg.set_deletable(False)
+    pbox = prog_dlg.get_content_area()
+    pbox.set_spacing(10)
+    pbox.set_margin_top(18)
+    pbox.set_margin_bottom(18)
+    pbox.set_margin_start(20)
+    pbox.set_margin_end(20)
+
+    plbl = Gtk.Label(label=f"Removing {display_name}...")
+    pbar = Gtk.ProgressBar()
+    pbox.pack_start(plbl, False, False, 0)
+    pbox.pack_start(pbar, False, False, 0)
+    prog_dlg.show_all()
+
+    def pulse():
+        if prog_dlg.get_visible():
+            pbar.pulse()
+            return True
+        return False
+
+    timer_id = GLib.timeout_add(80, pulse)
+
+    def worker():
+        ok, msg = run_uninstall(kind, target_id, desktop_path, purge)
+        subprocess.run(["update-desktop-database", "/usr/share/applications"], capture_output=True)
+        local_apps = os.path.expanduser("~/.local/share/applications")
+        if os.path.isdir(local_apps):
+            subprocess.run(["update-desktop-database", local_apps], capture_output=True)
+
+        def finish():
+            GLib.source_remove(timer_id)
+            prog_dlg.destroy()
+            if ok:
+                subprocess.run(["notify-send", "-i", icon_name, "Uninstalled", msg], capture_output=True)
+            else:
+                err = Gtk.MessageDialog(
+                    transient_for=None,
+                    flags=0,
+                    message_type=Gtk.MessageType.ERROR,
+                    buttons=Gtk.ButtonsType.OK,
+                    text=f"Failed to Uninstall {display_name}",
+                )
+                err.format_secondary_text(msg)
+                err.set_position(Gtk.WindowPosition.CENTER)
+                err.run()
+                err.destroy()
+            Gtk.main_quit()
+            return False
+
+        GLib.idle_add(finish)
+
+    threading.Thread(target=worker, daemon=True).start()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

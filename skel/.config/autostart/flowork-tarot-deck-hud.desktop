@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Flowork Quantum Tarot Deck HUD
+Comment=Sovereign 5-Card Holographic Tarot Deck Desktop Widget
+Exec=systemctl --user start flowork-tarot-deck-hud.service
+OnlyShowIn=XFCE;Flowork;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

@@ -1,0 +1,469 @@
+#!/usr/bin/env python3
+"""
+Flowork OS — Pure Optical Crystal Glass Action Confirmation HUD
+Pops up on cursor drop to confirm action before transforming media.
+Decoupled from XDND transaction: 100% immune to X11 grab deadlocks and Nemo freezing.
+"""
+import os
+import sys
+import threading
+import subprocess
+from pathlib import Path
+
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
+gi.require_version('GdkPixbuf', '2.0')
+from gi.repository import Gtk, Gdk, GdkPixbuf, GLib
+
+TRANSFORMER_BIN = "/opt/floworkos/bin/flowork-transformer"
+SFX_COMPLETE = "/usr/share/sounds/freedesktop/stereo/complete.oga"
+
+ACTION_METADATA = {
+    # Audio
+    "split-stem": {
+        "badge": "🎵 AUDIO STUDIO",
+        "title": "PISAH VOKAL & MUSIK",
+        "icon": "🎤",
+        "color": "#00f2fe",
+        "desc": "Memisahkan vokal dan instrumen menjadi 2 berkas MP3 terpisah (vocal & instrumental) di folder yang sama."
+    },
+    "clean-ai": {
+        "badge": "🎵 AUDIO SANITIZER",
+        "title": "HAPUS FINGERPRINT AI",
+        "icon": "🛡️",
+        "color": "#00ff66",
+        "desc": "Sanitasi bitexact audio: menghapus watermark frekuensi tinggi AI (>19.5kHz), SynthID artifacts, dan metadata AI generatif."
+    },
+    "mastering": {
+        "badge": "🎵 AUDIO MASTERING",
+        "title": "MASTERING BROADCAST (-14 LUFS)",
+        "icon": "🎚️",
+        "color": "#ffb800",
+        "desc": "Normalisasi kenyaringan broadcast standar Spotify/YouTube (-14 LUFS, true peak -1.0dB, LRA 11)."
+    },
+    "voice-boost": {
+        "badge": "🎵 VOICE STUDIO",
+        "title": "VOICE CLARITY & DE-NOISE",
+        "icon": "🎙️",
+        "color": "#a855f7",
+        "desc": "Membersihkan desis latar belakang dan mempertajam vokal dialog/rekaman suara."
+    },
+    "to-mp3": {
+        "badge": "🎵 AUDIO TRANSCODER",
+        "title": "KONVERSI KE 320K MP3",
+        "icon": "⚡",
+        "color": "#00f2fe",
+        "desc": "Transcode audio bitexact ke format MP3 320kbps kualitas maksimal."
+    },
+    "midi-render": {
+        "badge": "🎹 MIDI SYNTHESIZER",
+        "title": "RENDER PARTITUR KE MP3",
+        "icon": "🎹",
+        "color": "#00f2fe",
+        "desc": "Render berkas partitur MIDI ke MP3 320kbps menggunakan FluidSynth Soundfont."
+    },
+    # Image
+    "remove-bg": {
+        "badge": "🖼️ IMAGE STUDIO",
+        "title": "HAPUS BACKGROUND (PNG Transparan)",
+        "icon": "✂️",
+        "color": "#00ff66",
+        "desc": "Menghapus latar belakang objek utama secara lokal & offline menjadi format PNG transparan berkualitas tinggi."
+    },
+    "upscale": {
+        "badge": "🖼️ IMAGE STUDIO",
+        "title": "AI UPSCALE & ENHANCE (2x)",
+        "icon": "🔍",
+        "color": "#00f2fe",
+        "desc": "Meningkatkan resolusi gambar 200% dengan filter penajaman Lanczos tanpa artefak pecah."
+    },
+    "to-webp": {
+        "badge": "🖼️ IMAGE OPTIMIZER",
+        "title": "KONVERSI KE WEBP",
+        "icon": "⚡",
+        "color": "#ffb800",
+        "desc": "Mengompresi gambar ke format WebP modern hemat ukuran hingga 70-80% untuk web."
+    },
+    "clean-exif": {
+        "badge": "🖼️ PRIVACY SHIELD",
+        "title": "SANITASI METADATA EXIF",
+        "icon": "🛡️",
+        "color": "#a855f7",
+        "desc": "Menghapus semua metadata privasi: koordinat GPS lokasi, merk/serial kamera, dan riwayat pengambilan foto."
+    },
+    # Security & Archive
+    "shred": {
+        "badge": "💀 FORENSIC SHREDDER",
+        "title": "HAPUS TOTAL (Anti-Forensik)",
+        "icon": "💀",
+        "color": "#ff3366",
+        "desc": "PERINGATAN: Berkas akan ditimpa data acak 3-pass DoD + 0x00 murni sebelum dihapus. Tidak dapat dipulihkan!"
+    },
+    "clean-zip": {
+        "badge": "🗜️ ARCHIVE ENGINE",
+        "title": "KOMPRESI CLEAN ZIP",
+        "icon": "🗜️",
+        "color": "#00ff66",
+        "desc": "Membuat arsip ZIP bersih tanpa file sampah OS (.DS_Store, Thumbs.db, cache)."
+    },
+    "7z-ultra": {
+        "badge": "📦 ARCHIVE ENGINE",
+        "title": "KOMPRESI 7-ZIP ULTRA",
+        "icon": "📦",
+        "color": "#00f2fe",
+        "desc": "Kompresi LZMA2 rasio ultra maksimal."
+    },
+    "unpack": {
+        "badge": "📂 ARCHIVE ENGINE",
+        "title": "EKSTRAK BERKAS (UNPACK)",
+        "icon": "📂",
+        "color": "#ffb800",
+        "desc": "Mengekstrak isi arsip ke folder tujuan."
+    }
+}
+
+GLASS_CSS = b"""
+window.glass-hud {
+    background-color: rgba(12, 16, 22, 0.94);
+    border: 1px solid #00ff66;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.card-box {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.action-card {
+    background: linear-gradient(135deg, rgba(0, 255, 102, 0.08) 0%, rgba(0, 242, 254, 0.04) 100%);
+    border: 1px solid rgba(0, 255, 102, 0.25);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.badge-tag {
+    background-color: rgba(0, 255, 102, 0.15);
+    color: #00ff66;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 255, 102, 0.3);
+}
+
+.btn-confirm {
+    background: linear-gradient(180deg, #00ff66 0%, #00cc52 100%);
+    color: #051008;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 255, 102, 0.35);
+}
+.btn-confirm:hover {
+    background: #1aff75;
+    box-shadow: 0 6px 16px rgba(0, 255, 102, 0.55);
+}
+
+.btn-cancel {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.btn-cancel:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+.btn-open {
+    background: linear-gradient(180deg, #00f2fe 0%, #00c0cb 100%);
+    color: #03141a;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 242, 254, 0.35);
+}
+.btn-open:hover {
+    background: #33f5fe;
+}
+"""
+
+def play_sfx(path):
+    if os.path.exists(path) and os.path.exists("/usr/bin/paplay"):
+        try:
+            subprocess.Popen(["/usr/bin/paplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+def format_size(bytes_val):
+    if bytes_val < 1024:
+        return f"{bytes_val} B"
+    elif bytes_val < 1024 * 1024:
+        return f"{bytes_val / 1024:.1f} KB"
+    else:
+        return f"{bytes_val / (1024 * 1024):.1f} MB"
+
+
+class ActionConfirmationHUD(Gtk.Window):
+    def __init__(self, action, file_paths):
+        super().__init__(type=Gtk.WindowType.TOPLEVEL)
+        self.action = action.lower()
+        self.file_paths = [Path(p).resolve() for p in file_paths if os.path.exists(p)]
+        self.meta = ACTION_METADATA.get(self.action, {
+            "badge": "⚡ TRANSFORMER",
+            "title": self.action.upper(),
+            "icon": "⚡",
+            "color": "#00ff66",
+            "desc": f"Menjalankan tindakan {self.action} pada berkas terpilih."
+        })
+        self.output_files = []
+
+        self.set_title("Flowork Action Confirmation")
+        self.set_role("action_confirmation_hud")
+        self.set_decorated(False)
+        self.set_resizable(False)
+        self.set_skip_taskbar_hint(True)
+        self.set_keep_above(True)
+        self.set_position(Gtk.WindowPosition.CENTER)
+
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+        self.set_app_paintable(True)
+
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(GLASS_CSS)
+        Gtk.StyleContext.add_provider_for_screen(screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.get_style_context().add_class("glass-hud")
+
+        self.connect("key-press-event", self.on_key_press)
+        self.build_ui()
+
+    def build_ui(self):
+        main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        main_vbox.set_margin_top(16)
+        main_vbox.set_margin_bottom(16)
+        main_vbox.set_margin_start(20)
+        main_vbox.set_margin_end(20)
+        self.add(main_vbox)
+
+        # 1. Header Bar
+        hdr_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        lbl_badge = Gtk.Label(label=self.meta["badge"])
+        lbl_badge.get_style_context().add_class("badge-tag")
+        hdr_box.pack_start(lbl_badge, False, False, 0)
+
+        hdr_spacer = Gtk.Box()
+        hdr_box.pack_start(hdr_spacer, True, True, 0)
+
+        btn_close = Gtk.Button(label="✕")
+        btn_close.set_relief(Gtk.ReliefStyle.NONE)
+        btn_close.connect("clicked", lambda b: self.destroy())
+        hdr_box.pack_end(btn_close, False, False, 0)
+        main_vbox.pack_start(hdr_box, False, False, 0)
+
+        # 2. File Information Card
+        card_file = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        card_file.get_style_context().add_class("card-box")
+
+        # Preview Thumbnail / Icon
+        preview_box = Gtk.Box()
+        preview_box.set_size_request(60, 60)
+        if self.file_paths:
+            f0 = self.file_paths[0]
+            ext = f0.suffix.lower()
+            if ext in {".png", ".jpg", ".jpeg", ".webp", ".bmp"} and f0.is_file():
+                try:
+                    pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(f0), 60, 60, True)
+                    img = Gtk.Image.new_from_pixbuf(pb)
+                    preview_box.pack_start(img, True, True, 0)
+                except Exception:
+                    img = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
+                    preview_box.pack_start(img, True, True, 0)
+            elif ext in {".mp3", ".wav", ".flac", ".m4a", ".ogg", ".opus", ".mid"}:
+                img = Gtk.Image.new_from_icon_name("audio-x-generic", Gtk.IconSize.DIALOG)
+                preview_box.pack_start(img, True, True, 0)
+            else:
+                img = Gtk.Image.new_from_icon_name("folder" if f0.is_dir() else "text-x-generic", Gtk.IconSize.DIALOG)
+                preview_box.pack_start(img, True, True, 0)
+        card_file.pack_start(preview_box, False, False, 0)
+
+        # File Meta labels
+        file_info_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        if len(self.file_paths) == 1:
+            f0 = self.file_paths[0]
+            lbl_name = Gtk.Label()
+            esc_name = GLib.markup_escape_text(f0.name)
+            lbl_name.set_markup(f"<span font='JetBrains Mono 10' weight='bold' color='#ffffff'>{esc_name}</span>")
+            lbl_name.set_ellipsize(3) # END
+            lbl_name.set_max_width_chars(35)
+            lbl_name.set_xalign(0.0)
+
+            size_str = format_size(f0.stat().st_size) if f0.exists() else "0 B"
+            esc_parent = GLib.markup_escape_text(f0.parent.name)
+            lbl_sub = Gtk.Label()
+            lbl_sub.set_markup(f"<span font='Inter 8.5' color='#94a3b8'>Ukuran: {size_str} • Folder: {esc_parent}</span>")
+            lbl_sub.set_xalign(0.0)
+
+            file_info_vbox.pack_start(lbl_name, False, False, 0)
+            file_info_vbox.pack_start(lbl_sub, False, False, 0)
+        else:
+            lbl_name = Gtk.Label()
+            lbl_name.set_markup(f"<span font='JetBrains Mono 10' weight='bold' color='#ffffff'>{len(self.file_paths)} Berkas Terpilih</span>")
+            lbl_name.set_xalign(0.0)
+            file_info_vbox.pack_start(lbl_name, False, False, 0)
+
+        card_file.pack_start(file_info_vbox, True, True, 0)
+        main_vbox.pack_start(card_file, False, False, 0)
+
+        # 3. Action Target Card
+        card_action = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        card_action.get_style_context().add_class("action-card")
+
+        act_hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        lbl_act_icon = Gtk.Label()
+        lbl_act_icon.set_markup(f"<span font='16'>{self.meta['icon']}</span>")
+        lbl_act_title = Gtk.Label()
+        esc_title = GLib.markup_escape_text(self.meta['title'])
+        lbl_act_title.set_markup(f"<span font='Inter 11' weight='bold' color='{self.meta['color']}'>{esc_title}</span>")
+        lbl_act_title.set_xalign(0.0)
+        act_hdr.pack_start(lbl_act_icon, False, False, 0)
+        act_hdr.pack_start(lbl_act_title, False, False, 0)
+        card_action.pack_start(act_hdr, False, False, 0)
+
+        lbl_act_desc = Gtk.Label()
+        esc_desc = GLib.markup_escape_text(self.meta['desc'])
+        lbl_act_desc.set_markup(f"<span font='Inter 8.5' color='#cbd5e1'>{esc_desc}</span>")
+        lbl_act_desc.set_line_wrap(True)
+        lbl_act_desc.set_max_width_chars(45)
+        lbl_act_desc.set_xalign(0.0)
+        card_action.pack_start(lbl_act_desc, False, False, 0)
+
+        main_vbox.pack_start(card_action, False, False, 0)
+
+        # 4. Status / Progress Bar (Initially hidden)
+        self.prog_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.lbl_status = Gtk.Label()
+        self.lbl_status.set_markup("<span font='Inter 9' color='#00ff66'>Sedang memproses transformasi...</span>")
+        self.lbl_status.set_xalign(0.0)
+        self.prog_bar = Gtk.ProgressBar()
+        self.prog_bar.set_pulse_step(0.08)
+        self.prog_vbox.pack_start(self.lbl_status, False, False, 0)
+        self.prog_vbox.pack_start(self.prog_bar, False, False, 0)
+        self.prog_vbox.set_no_show_all(True)
+        self.prog_vbox.hide()
+        main_vbox.pack_start(self.prog_vbox, False, False, 0)
+
+        # 5. Buttons Action Box
+        self.btns_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        btn_cancel = Gtk.Button(label="✕ Batal (Esc)")
+        btn_cancel.get_style_context().add_class("btn-cancel")
+        btn_cancel.connect("clicked", lambda b: self.destroy())
+
+        btn_confirm = Gtk.Button(label=f"🚀 Proses {self.meta['title'].split('(')[0].strip()} (Enter)")
+        btn_confirm.get_style_context().add_class("btn-confirm")
+        btn_confirm.connect("clicked", self.on_execute_process)
+
+        self.btns_box.pack_start(btn_cancel, True, True, 0)
+        self.btns_box.pack_start(btn_confirm, True, True, 0)
+        main_vbox.pack_start(self.btns_box, False, False, 0)
+
+        # Finished Box
+        self.done_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.btn_open = Gtk.Button(label="📂 Buka Berkas Hasil")
+        self.btn_open.get_style_context().add_class("btn-open")
+        self.btn_open.connect("clicked", self.on_open_output)
+
+        btn_finish = Gtk.Button(label="Tutup")
+        btn_finish.get_style_context().add_class("btn-cancel")
+        btn_finish.connect("clicked", lambda b: self.destroy())
+
+        self.done_box.pack_start(btn_finish, False, False, 0)
+        self.done_box.pack_start(self.btn_open, True, True, 0)
+        self.done_box.set_no_show_all(True)
+        self.done_box.hide()
+        main_vbox.pack_start(self.done_box, False, False, 0)
+
+    def on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.destroy()
+            return True
+        elif event.keyval in {Gdk.KEY_Return, Gdk.KEY_KP_Enter}:
+            if self.btns_box.get_visible():
+                self.on_execute_process(None)
+            elif self.done_box.get_visible():
+                self.on_open_output(None)
+            return True
+        return False
+
+    def on_execute_process(self, btn):
+        self.btns_box.hide()
+        self.prog_vbox.show()
+        self.pulse_timer = GLib.timeout_add(80, self._pulse_progress)
+
+        # Worker thread for transformer
+        threading.Thread(target=self._run_transformer_thread, daemon=True).start()
+
+    def _pulse_progress(self):
+        self.prog_bar.pulse()
+        return True
+
+    def _run_transformer_thread(self):
+        targets = [str(p) for p in self.file_paths]
+        cmd = [TRANSFORMER_BIN, self.action, *targets]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        GLib.idle_add(self._on_transformer_done, res.returncode, res.stdout, res.stderr)
+
+    def _on_transformer_done(self, returncode, stdout, stderr):
+        if hasattr(self, 'pulse_timer'):
+            GLib.source_remove(self.pulse_timer)
+
+        self.prog_vbox.hide()
+        play_sfx(SFX_COMPLETE)
+
+        if returncode == 0:
+            self.lbl_status.set_markup("<span font='Inter 9.5' weight='bold' color='#00ff66'>✅ Selesai! Berkas berhasil ditransformasi.</span>")
+            self.lbl_status.show()
+            self.done_box.show()
+            # Auto-close after 8 seconds
+            GLib.timeout_add(8000, self.destroy)
+        else:
+            err_msg = stderr.strip().splitlines()[-1] if stderr.strip() else "Terjadi kesalahan"
+            self.lbl_status.set_markup(f"<span font='Inter 9' color='#ff3366'>❌ Gagal: {err_msg}</span>")
+            self.lbl_status.show()
+            self.done_box.show()
+
+    def on_open_output(self, btn):
+        if self.file_paths:
+            p = self.file_paths[0].parent
+            subprocess.Popen(["nemo", str(p)])
+        self.destroy()
+
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: flowork-action-hud <action> <path1> [path2...]")
+        sys.exit(1)
+
+    action = sys.argv[1]
+    paths = sys.argv[2:]
+
+    app = ActionConfirmationHUD(action, paths)
+    app.show_all()
+    Gtk.main()
+
+if __name__ == "__main__":
+    main()

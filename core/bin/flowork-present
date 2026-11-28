@@ -1,0 +1,531 @@
+#!/usr/bin/env python3
+"""
+Flowork OS — Desktop Presentation Stage (flowork-present)
+Optical Glass GTK3 + WebKit2GTK presentation popup for tables, diagrams, SVG, code, and slides.
+"""
+
+import argparse
+import html
+import json
+import os
+import signal
+import sys
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+gi.require_version("WebKit2", "4.1")
+from gi.repository import Gdk, GLib, Gtk, WebKit2
+
+
+PID_FILE = f"/run/user/{os.getuid()}/flowork-present.pid"
+
+
+def replace_previous_instance():
+    try:
+        if os.path.exists(PID_FILE):
+            with open(PID_FILE, "r") as f:
+                old_pid = int(f.read().strip())
+            if old_pid != os.getpid():
+                os.kill(old_pid, signal.SIGTERM)
+    except Exception:
+        pass
+    try:
+        os.makedirs(os.path.dirname(PID_FILE), exist_ok=True)
+        with open(PID_FILE, "w") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
+
+
+HTML_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --surface: #161e30;
+    --border: rgba(56, 189, 248, 0.35);
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --code-bg: #060a12;
+    --font-scale: 1.0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0b0f1a;
+    color: var(--text);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: calc(15px * var(--font-scale));
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  #stage {
+    padding: 22px 28px 28px 28px;
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4 {
+    margin: 0.8em 0 0.4em 0;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #f8fafc;
+  }
+  h1:first-child, h2:first-child, h3:first-child { margin-top: 0; }
+  h1 {
+    font-size: 1.65em;
+    background: linear-gradient(90deg, #38bdf8, #a5b4fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+    padding-bottom: 8px;
+  }
+  h2 { font-size: 1.3em; color: #7dd3fc; }
+  h3 { font-size: 1.1em; color: #c7d2fe; }
+  p { margin: 0.55em 0; }
+  ul, ol { margin: 0.5em 0; padding-left: 1.5em; }
+  li { margin: 0.25em 0; }
+  strong { color: #f8fafc; font-weight: 600; }
+  em { color: #cbd5e1; }
+  blockquote {
+    margin: 0.8em 0;
+    padding: 10px 16px;
+    border-left: 3px solid var(--accent);
+    background: rgba(56, 189, 248, 0.08);
+    border-radius: 0 8px 8px 0;
+    color: #cbd5e1;
+  }
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.88em;
+    background: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 10px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0.8em 0;
+  }
+  pre code {
+    background: transparent;
+    color: #e2e8f0;
+    padding: 0;
+    font-size: 0.86em;
+    line-height: 1.5;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.9em 0;
+    background: var(--surface);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  th {
+    background: rgba(56, 189, 248, 0.16);
+    color: #f0f9ff;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.92em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    color: #e2e8f0;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(56, 189, 248, 0.06); }
+  hr {
+    border: none;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    margin: 1.2em 0;
+  }
+  svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1em auto;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.55); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+const RAW_CONTENT = __CONTENT_JSON__;
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function inlineFormat(text) {
+  let out = escapeHtml(text);
+  out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  return out;
+}
+
+function renderMarkdown(md) {
+  // Preserve raw <svg>...</svg> blocks
+  const svgs = [];
+  md = md.replace(/<svg[\s\S]*?<\/svg>/gi, (m) => {
+    svgs.push(m);
+    return `\n@@SVG_BLOCK_${svgs.length - 1}@@\n`;
+  });
+
+  // Preserve fenced code blocks
+  const codes = [];
+  md = md.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_, lang, body) => {
+    codes.push(`<pre><code class="lang-${escapeHtml(lang)}">${escapeHtml(body.replace(/\n$/, ''))}</code></pre>`);
+    return `\n@@CODE_BLOCK_${codes.length - 1}@@\n`;
+  });
+
+  const lines = md.split(/\r?\n/);
+  let htmlOut = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) { i++; continue; }
+
+    const svgMatch = trimmed.match(/^@@SVG_BLOCK_(\d+)@@$/);
+    if (svgMatch) {
+      htmlOut.push(svgs[parseInt(svgMatch[1], 10)]);
+      i++; continue;
+    }
+
+    const codeMatch = trimmed.match(/^@@CODE_BLOCK_(\d+)@@$/);
+    if (codeMatch) {
+      htmlOut.push(codes[parseInt(codeMatch[1], 10)]);
+      i++; continue;
+    }
+
+    // Headings
+    const hMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
+    if (hMatch) {
+      const lvl = hMatch[1].length;
+      htmlOut.push(`<h${lvl}>${inlineFormat(hMatch[2])}</h${lvl}>`);
+      i++; continue;
+    }
+
+    // Horizontal rule
+    if (/^([-*_]){3,}$/.test(trimmed)) {
+      htmlOut.push('<hr>');
+      i++; continue;
+    }
+
+    // Blockquote
+    if (trimmed.startsWith('>')) {
+      let bq = [];
+      while (i < lines.length && lines[i].trim().startsWith('>')) {
+        bq.push(inlineFormat(lines[i].trim().replace(/^>\s?/, '')));
+        i++;
+      }
+      htmlOut.push(`<blockquote>${bq.join('<br>')}</blockquote>`);
+      continue;
+    }
+
+    // Markdown Table
+    if (trimmed.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:-]+\|[\s|:-]*$/.test(lines[i + 1])) {
+      const parseRow = (r) => r.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+      const headers = parseRow(lines[i]);
+      i += 2;
+      let rows = [];
+      while (i < lines.length && lines[i].trim().includes('|') && lines[i].trim() !== '') {
+        rows.push(parseRow(lines[i]));
+        i++;
+      }
+      let tbl = '<table><thead><tr>' + headers.map(h => `<th>${inlineFormat(h)}</th>`).join('') + '</tr></thead><tbody>';
+      for (const r of rows) {
+        tbl += '<tr>' + headers.map((_, idx) => `<td>${inlineFormat(r[idx] || '')}</td>`).join('') + '</tr>';
+      }
+      tbl += '</tbody></table>';
+      htmlOut.push(tbl);
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*+]\s+/.test(trimmed)) {
+      let items = [];
+      while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
+        items.push(`<li>${inlineFormat(lines[i].trim().replace(/^[-*+]\s+/, ''))}</li>`);
+        i++;
+      }
+      htmlOut.push(`<ul>${items.join('')}</ul>`);
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s+/.test(trimmed)) {
+      let items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+        items.push(`<li>${inlineFormat(lines[i].trim().replace(/^\d+\.\s+/, ''))}</li>`);
+        i++;
+      }
+      htmlOut.push(`<ol>${items.join('')}</ol>`);
+      continue;
+    }
+
+    // Paragraph
+    let para = [];
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^(#{1,4}\s+|[-*+]\s+|\d+\.\s+|>\s?|@@(SVG|CODE)_BLOCK_)/.test(lines[i].trim())) {
+      para.push(inlineFormat(lines[i].trim()));
+      i++;
+    }
+    htmlOut.push(`<p>${para.join(' ')}</p>`);
+  }
+
+  return htmlOut.join('\n');
+}
+
+document.getElementById('stage').innerHTML = renderMarkdown(RAW_CONTENT);
+
+window.setFontScale = function(scale) {
+  document.documentElement.style.setProperty('--font-scale', scale);
+};
+</script>
+</body>
+</html>
+"""
+
+
+class PresentationWindow(Gtk.Window):
+    def __init__(self, title: str, content: str):
+        super().__init__(title=title)
+        self.raw_content = content
+        self.font_scale = 1.0
+        self.pinned = False
+
+        self.set_decorated(False)
+        self.set_app_paintable(True)
+        self.set_keep_above(True)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_default_size(920, 600)
+
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual and screen.is_composited():
+            self.set_visual(visual)
+
+        self.connect("draw", self.on_draw)
+        self.connect("key-press-event", self.on_key_press)
+        self.connect("destroy", Gtk.main_quit)
+
+        self.apply_css()
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        outer.set_margin_top(10)
+        outer.set_margin_bottom(10)
+        outer.set_margin_start(10)
+        outer.set_margin_end(10)
+        self.add(outer)
+
+        # Header bar (draggable)
+        header_ev = Gtk.EventBox()
+        header_ev.connect("button-press-event", self.on_header_drag)
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        header.get_style_context().add_class("present-header")
+        header_ev.add(header)
+        outer.pack_start(header_ev, False, False, 0)
+
+        badge = Gtk.Label(label="FLOWORK STAGE")
+        badge.get_style_context().add_class("stage-badge")
+        header.pack_start(badge, False, False, 0)
+
+        title_lbl = Gtk.Label(label=title)
+        title_lbl.get_style_context().add_class("stage-title")
+        title_lbl.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
+        header.pack_start(title_lbl, True, True, 0)
+
+        btn_zoom_out = Gtk.Button(label="A-")
+        btn_zoom_out.get_style_context().add_class("stage-btn")
+        btn_zoom_out.connect("clicked", lambda *_: self.adjust_zoom(-0.1))
+        header.pack_start(btn_zoom_out, False, False, 0)
+
+        btn_zoom_in = Gtk.Button(label="A+")
+        btn_zoom_in.get_style_context().add_class("stage-btn")
+        btn_zoom_in.connect("clicked", lambda *_: self.adjust_zoom(0.1))
+        header.pack_start(btn_zoom_in, False, False, 0)
+
+        btn_copy = Gtk.Button(label="Copy")
+        btn_copy.get_style_context().add_class("stage-btn")
+        btn_copy.connect("clicked", self.on_copy)
+        header.pack_start(btn_copy, False, False, 0)
+
+        btn_close = Gtk.Button(label="Close")
+        btn_close.get_style_context().add_class("stage-close")
+        btn_close.connect("clicked", lambda *_: self.close())
+        header.pack_start(btn_close, False, False, 0)
+
+        # WebKit2 View (solid opaque background)
+        self.webview = WebKit2.WebView()
+        rgba = Gdk.RGBA(0.043, 0.059, 0.102, 1.0)
+        self.webview.set_background_color(rgba)
+        settings = self.webview.get_settings()
+        settings.set_enable_javascript(True)
+
+        rendered_html = HTML_TEMPLATE.replace("__CONTENT_JSON__", json.dumps(content))
+        self.webview.load_html(rendered_html, "file:///")
+
+        scroll_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        scroll_box.set_margin_bottom(6)
+        scroll_box.set_margin_start(2)
+        scroll_box.set_margin_end(2)
+        scroll_box.pack_start(self.webview, True, True, 0)
+        outer.pack_start(scroll_box, True, True, 0)
+
+        self.set_opacity(1.0)
+        self.show_all()
+
+    def apply_css(self):
+        css = b"""
+        .present-header {
+            background: #0f172a;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.32);
+            border-radius: 14px 14px 0 0;
+            padding: 10px 16px;
+        }
+        .stage-badge {
+            background: rgba(56, 189, 248, 0.18);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+        .stage-title {
+            color: #f1f5f9;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .stage-btn {
+            background: rgba(30, 41, 59, 0.8);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+        }
+        .stage-btn:hover {
+            background: rgba(56, 189, 248, 0.22);
+            color: #ffffff;
+        }
+        .stage-close {
+            background: rgba(239, 68, 68, 0.18);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+        }
+        .stage-close:hover {
+            background: rgba(239, 68, 68, 0.45);
+            color: #ffffff;
+        }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def on_draw(self, widget, cr):
+        w = widget.get_allocated_width()
+        h = widget.get_allocated_height()
+        pad = 10.0
+        r = 16.0
+        bx, by, bw, bh = pad, pad, w - 2 * pad, h - 2 * pad
+
+        cr.set_operator(1)  # CAIRO_OPERATOR_SOURCE
+        cr.set_source_rgba(0, 0, 0, 0)
+        cr.paint()
+
+        cr.set_operator(2)  # CAIRO_OPERATOR_OVER
+        # Rounded rect path
+        cr.new_sub_path()
+        cr.arc(bx + bw - r, by + r, r, -1.5708, 0)
+        cr.arc(bx + bw - r, by + bh - r, r, 0, 1.5708)
+        cr.arc(bx + r, by + bh - r, r, 1.5708, 3.1416)
+        cr.arc(bx + r, by + r, r, 3.1416, 4.7124)
+        cr.close_path()
+
+        cr.set_source_rgba(0.043, 0.059, 0.102, 1.0)
+        cr.fill_preserve()
+
+        cr.set_line_width(1.5)
+        cr.set_source_rgba(0.22, 0.74, 0.97, 0.55)
+        cr.stroke()
+        return False
+
+    def on_header_drag(self, widget, event):
+        if event.button == 1:
+            self.begin_move_drag(event.button, int(event.x_root), int(event.y_root), event.time)
+
+    def on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.close()
+            return True
+        return False
+
+    def adjust_zoom(self, delta):
+        self.font_scale = max(0.7, min(1.8, self.font_scale + delta))
+        self.webview.evaluate_javascript(f"window.setFontScale({self.font_scale:.2f});", -1, None, None, None, None, None)
+
+    def on_copy(self, button):
+        cb = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        cb.set_text(self.raw_content, -1)
+        button.set_label("Copied!")
+        GLib.timeout_add(1500, lambda: button.set_label("Copy") or False)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Desktop Presentation Stage")
+    parser.add_argument("--title", default="Mr. Flow Presentation", help="Presentation window title")
+    parser.add_argument("--file", help="Read markdown/HTML content from file")
+    parser.add_argument("--stdin", action="store_true", help="Read content from stdin")
+    parser.add_argument("content", nargs="?", help="Inline content string")
+    args = parser.parse_args()
+
+    content = ""
+    if args.file:
+        with open(args.file, "r", encoding="utf-8") as f:
+            content = f.read()
+    elif args.stdin:
+        content = sys.stdin.read()
+    elif args.content:
+        content = args.content
+    else:
+        content = "# Flowork Presentation Stage\nNo content provided."
+
+    replace_previous_instance()
+    signal.signal(signal.SIGTERM, lambda *_: Gtk.main_quit())
+    PresentationWindow(args.title, content)
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Flowork Rollback
+GenericName=Git Rollback to RILIS V.1.0
+Comment=One-click rollback repo ke RILIS V.1.0 (hapus histori, force push GitHub)
+Exec=/opt/floworkos/bin/flowork-rollback --gui
+Icon=/opt/floworkos/apps/icons/flowork-rollback.svg
+Terminal=false
+Categories=System;Utility;Development;
+Keywords=rollback;git;reset;rilis;restore;recovery;
+StartupNotify=true
+StartupWMClass=flowork-rollback

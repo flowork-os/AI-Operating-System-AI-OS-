@@ -1,0 +1,12 @@
+{
+  "cooldown_duration_sec": 60,
+  "default_rotation_mode": "failover",
+  "enable_local_cache": true,
+  "enable_privacy_shield": true,
+  "host": "127.0.0.1",
+  "max_accounts": 50,
+  "offline_resilience": false,
+  "port": 9099,
+  "single_model_lock": "claude-opus-4-6-thinking",
+  "token_refresh_margin_sec": 300
+}

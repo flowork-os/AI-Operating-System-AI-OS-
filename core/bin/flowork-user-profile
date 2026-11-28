@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import datetime
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib
+
+CANONICAL_PROFILE_PATH = "/opt/floworkos/config/user_profile.json"
+USER_PROFILE_PATH = os.path.expanduser("~/.config/floworkos/user_profile.json")
+
+
+def load_profile():
+    for path in (CANONICAL_PROFILE_PATH, USER_PROFILE_PATH):
+        if os.path.isfile(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+            except Exception:
+                pass
+    return {}
+
+
+def is_valid_dob(dob_str):
+    if not dob_str or not re.match(r"^\d{2}-\d{2}-\d{4}$", dob_str.strip()):
+        return False
+    try:
+        datetime.strptime(dob_str.strip(), "%d-%m-%Y")
+        return True
+    except ValueError:
+        return False
+
+
+def is_profile_complete(data):
+    name = str(data.get("full_name", "")).strip()
+    dob = str(data.get("birth_date", "")).strip()
+    return len(name) >= 2 and is_valid_dob(dob)
+
+
+def save_profile(full_name, birth_date):
+    payload = {
+        "full_name": full_name.strip(),
+        "birth_date": birth_date.strip(),
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    for path in (CANONICAL_PROFILE_PATH, USER_PROFILE_PATH):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+    return payload
+
+
+class UserProfileWindow(Gtk.Window):
+    def __init__(self, mandatory=False):
+        super().__init__(title="Flowork OS — Sovereign User Identity")
+        self.mandatory = mandatory
+        self.saved = False
+
+        self.set_default_size(480, 320)
+        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+        self.set_resizable(False)
+        self.set_keep_above(True)
+        self.stick()
+        self.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+        self.set_urgency_hint(True)
+        if mandatory:
+            self.set_deletable(False)
+
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual and screen.is_composited():
+            self.set_visual(visual)
+        self.set_app_paintable(True)
+
+        css = b"""
+        window {
+            background-color: rgba(4, 10, 18, 0.92);
+            border: 1px solid rgba(0, 255, 102, 0.55);
+            border-radius: 14px;
+        }
+        .title-lbl {
+            color: #00ff66;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .sub-lbl {
+            color: #b8d4e3;
+            font-size: 12px;
+        }
+        .field-lbl {
+            color: #e2f1f8;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        entry {
+            background-color: rgba(10, 22, 36, 0.85);
+            color: #ffffff;
+            border: 1px solid rgba(0, 242, 254, 0.45);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        entry:focus {
+            border-color: #00ff66;
+        }
+        .save-btn {
+            background-image: linear-gradient(90deg, #00c853, #00e5ff);
+            color: #020810;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 10px 18px;
+            border: none;
+        }
+        .err-lbl {
+            color: #ff5252;
+            font-size: 11px;
+        }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        existing = load_profile()
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        vbox.set_margin_top(22)
+        vbox.set_margin_bottom(22)
+        vbox.set_margin_start(26)
+        vbox.set_margin_end(26)
+        self.add(vbox)
+
+        lbl_title = Gtk.Label(label="SOVEREIGN USER IDENTITY")
+        lbl_title.get_style_context().add_class("title-lbl")
+        lbl_title.set_xalign(0.0)
+        vbox.pack_start(lbl_title, False, False, 0)
+
+        lbl_sub = Gtk.Label(
+            label="Isi nama lengkap dan tanggal lahir agar Mr. Flow mengenali identitasmu secara otomatis."
+        )
+        lbl_sub.get_style_context().add_class("sub-lbl")
+        lbl_sub.set_line_wrap(True)
+        lbl_sub.set_xalign(0.0)
+        vbox.pack_start(lbl_sub, False, False, 0)
+
+        lbl_name = Gtk.Label(label="Nama Lengkap")
+        lbl_name.get_style_context().add_class("field-lbl")
+        lbl_name.set_xalign(0.0)
+        vbox.pack_start(lbl_name, False, False, 0)
+
+        self.entry_name = Gtk.Entry()
+        self.entry_name.set_placeholder_text("Contoh: Budi Santoso")
+        self.entry_name.set_text(str(existing.get("full_name", "")))
+        vbox.pack_start(self.entry_name, False, False, 0)
+
+        lbl_dob = Gtk.Label(label="Tanggal Lahir Lengkap (DD-MM-YYYY)")
+        lbl_dob.get_style_context().add_class("field-lbl")
+        lbl_dob.set_xalign(0.0)
+        vbox.pack_start(lbl_dob, False, False, 0)
+
+        self.entry_dob = Gtk.Entry()
+        self.entry_dob.set_placeholder_text("Contoh: 17-08-1995")
+        self.entry_dob.set_text(str(existing.get("birth_date", "")))
+        self.entry_dob.connect("activate", lambda *_: self.on_save(None))
+        vbox.pack_start(self.entry_dob, False, False, 0)
+
+        self.lbl_err = Gtk.Label(label="")
+        self.lbl_err.get_style_context().add_class("err-lbl")
+        self.lbl_err.set_xalign(0.0)
+        vbox.pack_start(self.lbl_err, False, False, 0)
+
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        btn_save = Gtk.Button(label="Simpan Identitas")
+        btn_save.get_style_context().add_class("save-btn")
+        btn_save.connect("clicked", self.on_save)
+        btn_box.pack_end(btn_save, False, False, 0)
+        vbox.pack_end(btn_box, False, False, 0)
+
+        self.connect("delete-event", self.on_delete)
+        GLib.timeout_add(250, self._enforce_top)
+
+    def _enforce_top(self):
+        if self.get_visible():
+            self.set_keep_above(True)
+            self.present()
+        return True
+
+    def on_delete(self, *_):
+        if self.mandatory and not self.saved:
+            self.lbl_err.set_text("Wajib mengisi nama lengkap dan tanggal lahir terlebih dahulu.")
+            return True
+        Gtk.main_quit()
+        return False
+
+    def on_save(self, _):
+        name = self.entry_name.get_text().strip()
+        dob = self.entry_dob.get_text().strip()
+        if len(name) < 2:
+            self.lbl_err.set_text("Nama lengkap minimal 2 karakter.")
+            return
+        if not is_valid_dob(dob):
+            self.lbl_err.set_text("Format tanggal lahir harus DD-MM-YYYY (contoh: 17-08-1995).")
+            return
+        save_profile(name, dob)
+        self.saved = True
+        Gtk.main_quit()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Flowork OS Sovereign User Profile Gate")
+    parser.add_argument("--check-autostart", action="store_true", help="Show popup only if profile is incomplete")
+    parser.add_argument("--json", action="store_true", help="Print current profile JSON")
+    parser.add_argument("--set-name", type=str, help="Set full name non-interactively")
+    parser.add_argument("--set-dob", type=str, help="Set birth date (DD-MM-YYYY) non-interactively")
+    args = parser.parse_args()
+
+    if args.set_name and args.set_dob:
+        if not is_valid_dob(args.set_dob):
+            print("Invalid DOB format. Use DD-MM-YYYY.", file=sys.stderr)
+            sys.exit(1)
+        data = save_profile(args.set_name, args.set_dob)
+        print(json.dumps(data, ensure_ascii=False))
+        sys.exit(0)
+
+    profile = load_profile()
+    if args.json:
+        print(json.dumps({"complete": is_profile_complete(profile), "profile": profile}, ensure_ascii=False))
+        sys.exit(0)
+
+    if args.check_autostart and is_profile_complete(profile):
+        sys.exit(0)
+
+    win = UserProfileWindow(mandatory=args.check_autostart)
+    win.show_all()
+    win.present()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,422 @@
+{
+  "available_models": [
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.8 Flash (High)",
+      "id": "gemini-3.8-flash-high",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.8 Flash (Medium)",
+      "id": "gemini-3.8-flash-medium",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.8 Flash (Low)",
+      "id": "gemini-3.8-flash-low",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 250000,
+      "disabled": false,
+      "display_name": "Claude Sonnet 4.6 (Thinking)",
+      "id": "claude-sonnet-4-6",
+      "max_output_tokens": 64000,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 250000,
+      "disabled": false,
+      "display_name": "Claude Opus 4.6 (Thinking)",
+      "id": "claude-opus-4-6-thinking",
+      "max_output_tokens": 64000,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 131072,
+      "disabled": false,
+      "display_name": "GPT-OSS 120B (Medium)",
+      "id": "gpt-oss-120b-medium",
+      "max_output_tokens": 32768,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.5 Flash Lite",
+      "id": "gemini-2.5-flash",
+      "max_output_tokens": 65535,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.5 Flash Lite",
+      "id": "gemini-2.5-flash-lite",
+      "max_output_tokens": 65535,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.5 Flash Lite",
+      "id": "gemini-2.5-flash-thinking",
+      "max_output_tokens": 65535,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3 Flash",
+      "id": "gemini-3-flash",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 65536,
+      "disabled": false,
+      "display_name": "Gemini 3.1 Flash Image",
+      "id": "gemini-3.1-flash-image",
+      "max_output_tokens": 65536,
+      "supports_thinking": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.1 Flash Lite",
+      "id": "gemini-3.1-flash-lite",
+      "max_output_tokens": 65535,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 3.5 Flash Lite",
+      "id": "gemini-3.5-flash-lite",
+      "max_output_tokens": 65535,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "gemini-3.8-flash-tiered",
+      "id": "gemini-3.8-flash-tiered",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "gemini-4-hydrogen-sonar",
+      "id": "gemini-4-hydrogen-sonar",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 16384,
+      "disabled": false,
+      "display_name": "tab_flash_lite_preview",
+      "id": "tab_flash_lite_preview",
+      "max_output_tokens": 4096,
+      "supports_thinking": false
+    },
+    {
+      "context_window": 16384,
+      "disabled": false,
+      "display_name": "tab_jump_flash_lite_preview",
+      "id": "tab_jump_flash_lite_preview",
+      "max_output_tokens": 4096,
+      "supports_thinking": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 4 Hydrogen (XHigh)",
+      "id": "gemini-4-hydrogen-high",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 4 Hydrogen (Medium)",
+      "id": "gemini-4-hydrogen-medium",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "display_name": "Gemini 4 Hydrogen (Low)",
+      "id": "gemini-4-hydrogen-low",
+      "max_output_tokens": 65536,
+      "supports_thinking": true
+    }
+  ],
+  "catalog": [
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3.8-flash-high",
+      "max_output_tokens": 65536,
+      "name": "Gemini 3.8 Flash (High)",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "Leaving Soon",
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3.8-flash-medium",
+      "max_output_tokens": 65536,
+      "name": "Gemini 3.8 Flash (Medium)",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "Leaving Soon",
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3.8-flash-low",
+      "max_output_tokens": 65536,
+      "name": "Gemini 3.8 Flash (Low)",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "Leaving Soon",
+      "unavailable": false
+    },
+    {
+      "context_window": 250000,
+      "disabled": false,
+      "id": "claude-sonnet-4-6",
+      "max_output_tokens": 64000,
+      "name": "Claude Sonnet 4.6 (Thinking)",
+      "owned_by": "anthropic",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "Notice",
+      "unavailable": false
+    },
+    {
+      "context_window": 250000,
+      "disabled": false,
+      "id": "claude-opus-4-6-thinking",
+      "max_output_tokens": 64000,
+      "name": "Claude Opus 4.6 (Thinking)",
+      "owned_by": "anthropic",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "Notice",
+      "unavailable": false
+    },
+    {
+      "context_window": 131072,
+      "disabled": false,
+      "id": "gpt-oss-120b-medium",
+      "max_output_tokens": 32768,
+      "name": "GPT-OSS 120B (Medium)",
+      "owned_by": "openai",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "Notice",
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-2.5-flash",
+      "max_output_tokens": 65535,
+      "name": "Gemini 3.5 Flash Lite",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-2.5-flash-lite",
+      "max_output_tokens": 65535,
+      "name": "Gemini 3.5 Flash Lite",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-2.5-flash-thinking",
+      "max_output_tokens": 65535,
+      "name": "Gemini 3.5 Flash Lite",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3-flash",
+      "max_output_tokens": 65536,
+      "name": "Gemini 3 Flash",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 65536,
+      "disabled": false,
+      "id": "gemini-3.1-flash-image",
+      "max_output_tokens": 65536,
+      "name": "Gemini 3.1 Flash Image",
+      "owned_by": "google",
+      "recommended": false,
+      "supports_thinking": false,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3.1-flash-lite",
+      "max_output_tokens": 65535,
+      "name": "Gemini 3.1 Flash Lite",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3.5-flash-lite",
+      "max_output_tokens": 65535,
+      "name": "Gemini 3.5 Flash Lite",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-3.8-flash-tiered",
+      "max_output_tokens": 65536,
+      "name": "gemini-3.8-flash-tiered",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-4-hydrogen-sonar",
+      "max_output_tokens": 65536,
+      "name": "gemini-4-hydrogen-sonar",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 16384,
+      "disabled": false,
+      "id": "tab_flash_lite_preview",
+      "max_output_tokens": 4096,
+      "name": "tab_flash_lite_preview",
+      "owned_by": "google",
+      "recommended": false,
+      "supports_thinking": false,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 16384,
+      "disabled": false,
+      "id": "tab_jump_flash_lite_preview",
+      "max_output_tokens": 4096,
+      "name": "tab_jump_flash_lite_preview",
+      "owned_by": "google",
+      "recommended": false,
+      "supports_thinking": false,
+      "tag_title": null,
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-4-hydrogen-high",
+      "max_output_tokens": 65536,
+      "name": "Gemini 4 Hydrogen (XHigh)",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "New",
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-4-hydrogen-medium",
+      "max_output_tokens": 65536,
+      "name": "Gemini 4 Hydrogen (Medium)",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "New",
+      "unavailable": false
+    },
+    {
+      "context_window": 1048576,
+      "disabled": false,
+      "id": "gemini-4-hydrogen-low",
+      "max_output_tokens": 65536,
+      "name": "Gemini 4 Hydrogen (Low)",
+      "owned_by": "google",
+      "recommended": true,
+      "supports_thinking": true,
+      "tag_title": "New",
+      "unavailable": false
+    },
+    {
+      "id": "deepseek-v4-9b-uncensored",
+      "name": "DeepSeek-V4 Pro Qwen3.5 9B (Uncensored Local)",
+      "owned_by": "ollama"
+    },
+    {
+      "id": "qwen2.5-coder:7b",
+      "name": "Qwen 2.5 Coder 7B (Local Tool Executor)",
+      "owned_by": "ollama"
+    }
+  ],
+  "default_agent_model_id": "gemini-3.8-flash-high",
+  "default_model": "claude-opus-4-6-thinking",
+  "deprecated_model_ids": {},
+  "last_synced_at": "2026-11-28T11:19:14.045048950+00:00",
+  "project_id": "aicode-consumers",
+  "source": "cloudcode_live"
+}

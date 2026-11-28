@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Sovereign 4K UHD Video Renderer CLI Launcher (Node 07)
+exec python3 /opt/floworkos/engine/renderer_4k/renderer_4k.py "$@"

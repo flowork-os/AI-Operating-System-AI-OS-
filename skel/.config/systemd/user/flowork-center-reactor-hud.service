@@ -1,0 +1,12 @@
+[Unit]
+Description=Flowork OS Center Interactive Reactor HUD (Jarvis / Matrix)
+PartOf=graphical-session.target
+After=graphical-session.target flowork-motion-ambient.service
+
+[Service]
+ExecStart=/opt/floworkos/bin/flowork-center-reactor-hud
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

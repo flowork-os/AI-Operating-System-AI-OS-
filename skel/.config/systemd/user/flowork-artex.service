@@ -1,0 +1,15 @@
+[Unit]
+Description=ARTEX Autonomous Penetration Testing Platform Daemon
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/floworkos/apps/artex
+ExecStart=/opt/floworkos/apps/artex/bin/artex -addr 127.0.0.1:8787 -data /opt/floworkos/apps/artex/data
+Restart=always
+RestartSec=3
+StandardOutput=append:/opt/floworkos/apps/artex/data/artex.log
+StandardError=append:/opt/floworkos/apps/artex/data/artex.log
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,504 @@
+#!/usr/bin/env python3
+"""
+Flowork OS Sovereign Uninstaller & OS Cleaner (flowork-uninstall)
+Safely removes Flowork native apps, user-installed APT packages, orphaned launchers,
+and system caches to keep Flowork OS ultra-lightweight.
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+FLOWORK_ROOT = Path("/opt/floworkos")
+APPS_DIR = FLOWORK_ROOT / "apps"
+BIN_DIR = FLOWORK_ROOT / "bin"
+APPS_JSON = APPS_DIR / "apps.json"
+USR_LOCAL_BIN = Path("/usr/local/bin")
+SYS_DESKTOP_DIR = Path("/usr/share/applications")
+USER_DESKTOP_DIR = Path.home() / ".local/share/applications"
+PLANK_DIR = Path.home() / ".config/plank/dock1/launchers"
+
+# Core Flowork apps that should not be removed without --force
+PROTECTED_FLOWORK_APPS = {
+    "app-manager",
+    "flowork-app-manager",
+    "craft-anything",
+    "flowork-studio",
+    "flowork-settings",
+    "flowork-terminal",
+    "flowork-browser",
+    "flowork-files",
+    "flowork-dock",
+    "flowork-hud",
+    "flowork-present",
+}
+
+# Core Linux/Flowork APT package prefixes that must never be removed casually
+PROTECTED_APT_EXACT = {
+    "apt", "apt-utils", "base-files", "base-passwd", "bash", "coreutils",
+    "dash", "dbus", "debianutils", "diffutils", "dpkg", "e2fsprogs",
+    "findutils", "grep", "gzip", "hostname", "init", "init-system-helpers",
+    "libc-bin", "libc6", "login", "mount", "ncurses-base", "ncurses-bin",
+    "passwd", "perl-base", "procps", "python3", "python3-minimal",
+    "python3-gi", "gir1.2-gtk-3.0", "sed", "sudo", "systemd", "systemd-sysv",
+    "tar", "util-linux", "xfwm4", "xorg", "xserver-xorg", "xinit",
+    "network-manager", "pulseaudio", "pipewire", "plank", "lightdm",
+    "openssh-client", "openssh-server", "curl", "wget", "git", "ca-certificates",
+}
+
+PROTECTED_APT_PREFIXES = (
+    "linux-image", "linux-headers", "linux-modules", "linux-base",
+    "flowork", "lib", "xserver-xorg-", "xfce4-", "python3-", "gir1.2-",
+    "systemd-", "dbus-", "udev", "grub", "firmware-", "fonts-",
+)
+
+
+def get_dir_size(path: Path) -> int:
+    total = 0
+    if not path.exists():
+        return 0
+    if path.is_file() or path.is_symlink():
+        try:
+            return path.lstat().st_size
+        except OSError:
+            return 0
+    for root, _, files in os.walk(path, followlinks=False):
+        for f in files:
+            fp = Path(root) / f
+            try:
+                total += fp.lstat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def format_size(num_bytes: int) -> str:
+    if num_bytes < 1024:
+        return f"{num_bytes} B"
+    elif num_bytes < 1024 ** 2:
+        return f"{num_bytes / 1024:.1f} KB"
+    elif num_bytes < 1024 ** 3:
+        return f"{num_bytes / (1024 ** 2):.1f} MB"
+    return f"{num_bytes / (1024 ** 3):.2f} GB"
+
+
+def load_apps_json() -> dict:
+    if APPS_JSON.exists():
+        try:
+            with open(APPS_JSON, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"apps": []}
+
+
+def save_apps_json(data: dict):
+    tmp = APPS_JSON.with_suffix(".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    tmp.replace(APPS_JSON)
+
+
+def parse_desktop_file(path: Path) -> dict:
+    info = {"name": path.stem, "comment": "", "exec": "", "icon": "", "categories": ""}
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("Name=") and info["name"] == path.stem:
+                    info["name"] = line.split("=", 1)[1].strip()
+                elif line.startswith("Comment=") and not info["comment"]:
+                    info["comment"] = line.split("=", 1)[1].strip()
+                elif line.startswith("Exec=") and not info["exec"]:
+                    info["exec"] = line.split("=", 1)[1].strip()
+                elif line.startswith("Icon=") and not info["icon"]:
+                    info["icon"] = line.split("=", 1)[1].strip()
+                elif line.startswith("Categories=") and not info["categories"]:
+                    info["categories"] = line.split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return info
+
+
+def scan_flowork_apps() -> list:
+    apps = []
+    seen_ids = set()
+    registry = load_apps_json()
+    reg_map = {}
+    for entry in registry.get("apps", []):
+        eid = entry.get("id") or entry.get("name", "").lower().replace(" ", "-")
+        if eid:
+            reg_map[eid] = entry
+
+    if APPS_DIR.exists():
+        for item in sorted(APPS_DIR.iterdir()):
+            if item.is_dir() and not item.name.startswith("."):
+                app_id = item.name
+                seen_ids.add(app_id)
+                size_bytes = get_dir_size(item)
+                reg = reg_map.get(app_id, {})
+                desktop_candidates = [
+                    APPS_DIR / f"{app_id}.desktop",
+                    APPS_DIR / f"flowork-{app_id}.desktop",
+                    SYS_DESKTOP_DIR / f"{app_id}.desktop",
+                    SYS_DESKTOP_DIR / f"flowork-{app_id}.desktop",
+                ]
+                d_info = {}
+                for dc in desktop_candidates:
+                    if dc.exists():
+                        d_info = parse_desktop_file(dc)
+                        break
+
+                name = reg.get("name") or d_info.get("name") or app_id
+                desc = reg.get("description") or d_info.get("comment") or f"Flowork app in {item}"
+                protected = app_id in PROTECTED_FLOWORK_APPS or f"flowork-{app_id}" in PROTECTED_FLOWORK_APPS
+                apps.append({
+                    "id": app_id,
+                    "name": name,
+                    "type": "flowork",
+                    "size_bytes": size_bytes,
+                    "size_human": format_size(size_bytes),
+                    "description": desc,
+                    "path": str(item),
+                    "protected": protected,
+                })
+
+    # Also include standalone .desktop apps in /opt/floworkos/apps/ without a matching folder
+    if APPS_DIR.exists():
+        for item in sorted(APPS_DIR.glob("*.desktop")):
+            stem = item.stem
+            short_stem = stem.replace("flowork-", "", 1) if stem.startswith("flowork-") else stem
+            if stem in seen_ids or short_stem in seen_ids:
+                continue
+            d_info = parse_desktop_file(item)
+            protected = stem in PROTECTED_FLOWORK_APPS or short_stem in PROTECTED_FLOWORK_APPS
+            apps.append({
+                "id": stem,
+                "name": d_info.get("name") or stem,
+                "type": "flowork",
+                "size_bytes": item.stat().st_size,
+                "size_human": format_size(item.stat().st_size),
+                "description": d_info.get("comment") or f"Launcher: {d_info.get('exec', '')}",
+                "path": str(item),
+                "protected": protected,
+            })
+
+    return apps
+
+
+def is_apt_protected(pkg: str) -> bool:
+    if pkg in PROTECTED_APT_EXACT:
+        return True
+    for pref in PROTECTED_APT_PREFIXES:
+        if pkg.startswith(pref):
+            return True
+    return False
+
+
+def scan_apt_apps() -> list:
+    apps = []
+    try:
+        manual_out = subprocess.check_output(
+            ["apt-mark", "showmanual"], text=True, stderr=subprocess.DEVNULL
+        )
+        manual_pkgs = {line.strip() for line in manual_out.splitlines() if line.strip()}
+    except Exception:
+        manual_pkgs = set()
+
+    if not manual_pkgs:
+        return apps
+
+    try:
+        dpkg_out = subprocess.check_output(
+            ["dpkg-query", "-W", "-f=${Package}\t${Installed-Size}\t${Essential}\t${binary:Summary}\n"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return apps
+
+    for line in dpkg_out.splitlines():
+        parts = line.split("\t", 3)
+        if len(parts) < 4:
+            continue
+        pkg, size_kb_str, essential, summary = parts
+        if pkg not in manual_pkgs:
+            continue
+        if essential.strip().lower() == "yes":
+            continue
+        if is_apt_protected(pkg):
+            continue
+        try:
+            size_bytes = int(size_kb_str.strip()) * 1024
+        except ValueError:
+            size_bytes = 0
+        apps.append({
+            "id": pkg,
+            "name": pkg,
+            "type": "apt",
+            "size_bytes": size_bytes,
+            "size_human": format_size(size_bytes),
+            "description": summary.strip(),
+            "path": f"apt://{pkg}",
+            "protected": False,
+        })
+
+    apps.sort(key=lambda x: x["size_bytes"], reverse=True)
+    return apps
+
+
+def scan_orphans() -> dict:
+    broken_symlinks = []
+    for d in (USR_LOCAL_BIN, BIN_DIR):
+        if d.exists():
+            for item in d.iterdir():
+                if item.is_symlink() and not item.exists():
+                    broken_symlinks.append(str(item))
+
+    orphaned_desktops = []
+    for d in (SYS_DESKTOP_DIR, USER_DESKTOP_DIR):
+        if d.exists():
+            for item in d.glob("*.desktop"):
+                info = parse_desktop_file(item)
+                exe = info.get("exec", "").strip()
+                if not exe:
+                    continue
+                cmd = exe.split()[0].strip('"').strip("'")
+                if cmd.startswith("/") and not Path(cmd).exists():
+                    orphaned_desktops.append(str(item))
+
+    apt_cache_bytes = get_dir_size(Path("/var/cache/apt/archives"))
+    return {
+        "broken_symlinks": broken_symlinks,
+        "orphaned_desktops": orphaned_desktops,
+        "apt_cache_bytes": apt_cache_bytes,
+        "apt_cache_human": format_size(apt_cache_bytes),
+    }
+
+
+def remove_flowork_app(app_id: str, purge: bool = False, force: bool = False) -> tuple[bool, str, int]:
+    if (app_id in PROTECTED_FLOWORK_APPS or f"flowork-{app_id}" in PROTECTED_FLOWORK_APPS) and not force:
+        return False, f"Refused: '{app_id}' is a protected core Flowork OS app. Use --force to override.", 0
+
+    freed = 0
+    removed_items = []
+
+    # Stop running processes matching app_id safely
+    if app_id not in ("app-manager", "flowork-app-manager"):
+        subprocess.run(["pkill", "-f", f"/opt/floworkos/apps/{app_id}"], stderr=subprocess.DEVNULL)
+
+    candidates = [
+        APPS_DIR / app_id,
+        APPS_DIR / f"{app_id}.desktop",
+        APPS_DIR / f"flowork-{app_id}.desktop",
+        BIN_DIR / app_id,
+        BIN_DIR / f"flowork-{app_id}",
+        USR_LOCAL_BIN / app_id,
+        USR_LOCAL_BIN / f"flowork-{app_id}",
+        SYS_DESKTOP_DIR / f"{app_id}.desktop",
+        SYS_DESKTOP_DIR / f"flowork-{app_id}.desktop",
+        USER_DESKTOP_DIR / f"{app_id}.desktop",
+        USER_DESKTOP_DIR / f"flowork-{app_id}.desktop",
+        PLANK_DIR / f"{app_id}.dockitem",
+        PLANK_DIR / f"flowork-{app_id}.dockitem",
+    ]
+
+    if purge:
+        home = Path.home()
+        candidates.extend([
+            home / ".config" / app_id,
+            home / ".local/share" / app_id,
+            home / ".cache" / app_id,
+        ])
+
+    for target in candidates:
+        if target.is_symlink() or target.is_file():
+            try:
+                freed += target.lstat().st_size
+                target.unlink()
+                removed_items.append(str(target))
+            except PermissionError:
+                res = subprocess.run(["sudo", "rm", "-f", str(target)], capture_output=True)
+                if res.returncode == 0:
+                    removed_items.append(str(target))
+        elif target.is_dir():
+            sz = get_dir_size(target)
+            try:
+                shutil.rmtree(target)
+                freed += sz
+                removed_items.append(str(target))
+            except PermissionError:
+                res = subprocess.run(["sudo", "rm", "-rf", str(target)], capture_output=True)
+                if res.returncode == 0:
+                    freed += sz
+                    removed_items.append(str(target))
+
+    # Update apps.json
+    if APPS_JSON.exists():
+        reg = load_apps_json()
+        orig_len = len(reg.get("apps", []))
+        reg["apps"] = [
+            a for a in reg.get("apps", [])
+            if a.get("id") != app_id and a.get("name", "").lower().replace(" ", "-") != app_id
+        ]
+        if len(reg["apps"]) != orig_len:
+            save_apps_json(reg)
+            removed_items.append(f"{APPS_JSON} (registry entry)")
+
+    if not removed_items:
+        return False, f"Flowork app '{app_id}' not found.", 0
+
+    subprocess.run(["update-desktop-database", str(SYS_DESKTOP_DIR)], stderr=subprocess.DEVNULL)
+    return True, f"Removed '{app_id}' ({len(removed_items)} items, freed {format_size(freed)}).", freed
+
+
+def remove_apt_pkg(pkg: str, purge: bool = False, force: bool = False) -> tuple[bool, str, int]:
+    if is_apt_protected(pkg) and not force:
+        return False, f"Refused: '{pkg}' is a protected core OS package. Use --force to override.", 0
+
+    # Estimate size before removal
+    size_bytes = 0
+    try:
+        out = subprocess.check_output(
+            ["dpkg-query", "-W", "-f=${Installed-Size}", pkg], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        size_bytes = int(out) * 1024
+    except Exception:
+        pass
+
+    action = "purge" if purge else "remove"
+    cmd = ["sudo", "apt-get", action, "-y", pkg]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        return False, f"APT {action} failed for '{pkg}': {res.stderr.strip()}", 0
+
+    subprocess.run(["sudo", "apt-get", "autoremove", "-y"], capture_output=True)
+    return True, f"APT {action}d '{pkg}' (freed ~{format_size(size_bytes)}).", size_bytes
+
+
+def clean_system() -> tuple[bool, str, int]:
+    orphans = scan_orphans()
+    freed = 0
+    cleaned_count = 0
+
+    for link in orphans["broken_symlinks"]:
+        p = Path(link)
+        try:
+            p.unlink()
+            cleaned_count += 1
+        except PermissionError:
+            if subprocess.run(["sudo", "rm", "-f", link]).returncode == 0:
+                cleaned_count += 1
+
+    for desk in orphans["orphaned_desktops"]:
+        p = Path(desk)
+        try:
+            freed += p.stat().st_size
+            p.unlink()
+            cleaned_count += 1
+        except PermissionError:
+            if subprocess.run(["sudo", "rm", "-f", desk]).returncode == 0:
+                cleaned_count += 1
+
+    freed += orphans["apt_cache_bytes"]
+    subprocess.run(["sudo", "apt-get", "autoremove", "-y"], capture_output=True)
+    subprocess.run(["sudo", "apt-get", "clean"], capture_output=True)
+    subprocess.run(["update-desktop-database", str(SYS_DESKTOP_DIR)], stderr=subprocess.DEVNULL)
+
+    return True, f"Cleaned {cleaned_count} orphaned entries + APT cache (freed ~{format_size(freed)}).", freed
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="flowork-uninstall",
+        description="Flowork OS Sovereign Uninstaller & OS Cleaner",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_list = sub.add_parser("list", help="List installed apps and orphans")
+    p_list.add_argument("--type", choices=["all", "flowork", "apt", "orphan"], default="all")
+    p_list.add_argument("--json", action="store_true", help="Output JSON")
+
+    p_rem = sub.add_parser("remove", help="Uninstall an app or package")
+    p_rem.add_argument("target", help="App ID or APT package name")
+    p_rem.add_argument("--type", choices=["auto", "flowork", "apt"], default="auto")
+    p_rem.add_argument("--purge", action="store_true", help="Also remove user config/cache")
+    p_rem.add_argument("--force", action="store_true", help="Override core protection")
+    p_rem.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
+
+    p_clean = sub.add_parser("clean", help="Clean orphaned launchers, broken symlinks, and APT cache")
+    p_clean.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
+
+    args = parser.parse_args()
+
+    if args.command == "list":
+        result = {}
+        if args.type in ("all", "flowork"):
+            result["flowork"] = scan_flowork_apps()
+        if args.type in ("all", "apt"):
+            result["apt"] = scan_apt_apps()
+        if args.type in ("all", "orphan"):
+            result["orphans"] = scan_orphans()
+
+        if args.json:
+            print(json.dumps(result, indent=2))
+            return
+
+        if "flowork" in result:
+            print(f"\n=== FLOWORK NATIVE APPS ({len(result['flowork'])}) ===")
+            for a in result["flowork"]:
+                tag = " [CORE]" if a["protected"] else ""
+                print(f"  {a['id']:<28} {a['size_human']:>10}  {a['name']}{tag}")
+
+        if "apt" in result:
+            print(f"\n=== USER APT PACKAGES ({len(result['apt'])}) ===")
+            for a in result["apt"]:
+                print(f"  {a['id']:<28} {a['size_human']:>10}  {a['description'][:55]}")
+
+        if "orphans" in result:
+            o = result["orphans"]
+            print("\n=== ORPHANS & CACHE ===")
+            print(f"  Broken symlinks   : {len(o['broken_symlinks'])}")
+            print(f"  Orphaned .desktop : {len(o['orphaned_desktops'])}")
+            print(f"  APT cache         : {o['apt_cache_human']}")
+
+    elif args.command == "remove":
+        target_type = args.type
+        if target_type == "auto":
+            if (APPS_DIR / args.target).exists() or (APPS_DIR / f"{args.target}.desktop").exists():
+                target_type = "flowork"
+            else:
+                target_type = "apt"
+
+        if not args.yes:
+            ans = input(f"Uninstall {target_type} '{args.target}' (purge={args.purge})? [y/N]: ").strip().lower()
+            if ans not in ("y", "yes"):
+                print("Cancelled.")
+                sys.exit(0)
+
+        if target_type == "flowork":
+            ok, msg, _ = remove_flowork_app(args.target, purge=args.purge, force=args.force)
+        else:
+            ok, msg, _ = remove_apt_pkg(args.target, purge=args.purge, force=args.force)
+
+        print(msg)
+        sys.exit(0 if ok else 1)
+
+    elif args.command == "clean":
+        if not args.yes:
+            ans = input("Clean broken symlinks, orphaned .desktop files, and APT cache? [y/N]: ").strip().lower()
+            if ans not in ("y", "yes"):
+                print("Cancelled.")
+                sys.exit(0)
+        ok, msg, _ = clean_system()
+        print(msg)
+        sys.exit(0 if ok else 1)
+
+
+if __name__ == "__main__":
+    main()

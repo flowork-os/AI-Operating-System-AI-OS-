@@ -1,0 +1,15 @@
+[Unit]
+Description=Flowork OS Dual-Wing Stealth Ambient Desktop HUD
+After=graphical-session.target flowork-motion-ambient.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XDG_CURRENT_DESKTOP=Flowork
+ExecStart=/usr/bin/python3 /opt/floworkos/theme/flowork-ambient-wings.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target default.target

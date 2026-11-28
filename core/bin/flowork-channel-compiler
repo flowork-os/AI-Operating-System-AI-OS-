@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""
+Flowork Channel Compiler (Sovereign Fast-NVENC YouTube Compilation Builder)
+Usage:
+    flowork-channel-compiler https://www.youtube.com/@ChannelHandle [num_videos]
+"""
+import os
+import sys
+import json
+import subprocess
+import shutil
+
+def format_timestamp(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    if h > 0:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print("Usage: flowork-channel-compiler <channel_url_or_handle> [num_videos]")
+        print("Example: flowork-channel-compiler https://www.youtube.com/@JanganNontonDrachin 15")
+        sys.exit(0)
+
+    channel_input = sys.argv[1]
+    num_videos = int(sys.argv[2]) if len(sys.argv) > 2 else 15
+
+    channel_url = channel_input if channel_input.startswith("http") else f"https://www.youtube.com/{channel_input}"
+    if not channel_url.endswith("/videos"):
+        channel_url = f"{channel_url}/videos"
+
+    work_dir = os.path.expanduser("~/Videos/flowork_compilations")
+    src_dir = os.path.join(work_dir, "sources")
+    norm_dir = os.path.join(work_dir, "normalized")
+    os.makedirs(src_dir, exist_ok=True)
+    os.makedirs(norm_dir, exist_ok=True)
+
+    print(f"[*] Fetching metadata from: {channel_url}...")
+    fetch_cmd = ["/usr/local/bin/yt-dlp", "--flat-playlist", "-J", channel_url]
+    res = subprocess.run(fetch_cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        print(f"[!] Error fetching channel: {res.stderr}")
+        sys.exit(1)
+
+    data = json.loads(res.stdout)
+    channel_name = data.get("channel", "Compilation")
+    entries = data.get("entries", [])
+    if not entries:
+        print("[!] No videos found.")
+        sys.exit(1)
+
+    # Sort by views
+    sorted_entries = sorted(entries, key=lambda x: x.get("view_count") or 0, reverse=True)[:num_videos]
+    print(f"[*] Selected top {len(sorted_entries)} videos from {channel_name}")
+
+    downloaded = []
+    timestamps = []
+    cur_time = 0.0
+
+    for i, v in enumerate(sorted_entries, 1):
+        vid_id = v["id"]
+        title = v.get("title", f"Track_{i}")
+        clean_title = "".join(c for c in title if c.isalnum() or c in (" ", "-", "_")).strip()[:40]
+        filename = f"{i:02d}_{clean_title}.mp4"
+        filepath = os.path.join(src_dir, filename)
+
+        print(f"[{i}/{len(sorted_entries)}] Downloading: {title}...")
+        if not os.path.exists(filepath):
+            dl_cmd = [
+                "/usr/local/bin/yt-dlp",
+                "-f", "bv*[height<=1080]+ba/b[height<=1080]",
+                "--merge-output-format", "mp4",
+                "-o", filepath,
+                f"https://www.youtube.com/watch?v={vid_id}"
+            ]
+            subprocess.run(dl_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        probe_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", filepath]
+        p_res = subprocess.run(probe_cmd, capture_output=True, text=True)
+        try:
+            dur = float(p_res.stdout.strip())
+        except:
+            dur = float(v.get("duration", 240))
+
+        timestamps.append((format_timestamp(cur_time), title, dur))
+        cur_time += dur
+        downloaded.append(filepath)
+
+    # Normalization with NVENC
+    print("\n[*] Normalizing video streams to 1080p 30fps with RTX 4060 NVENC...")
+    norm_files = []
+    for i, fpath in enumerate(downloaded, 1):
+        out_norm = os.path.join(norm_dir, f"norm_{i:02d}.ts")
+        norm_files.append(out_norm)
+        if not os.path.exists(out_norm):
+            ff_cmd = [
+                "ffmpeg", "-y", "-i", fpath,
+                "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30",
+                "-c:v", "h264_nvenc", "-preset", "p4", "-b:v", "6000k",
+                "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
+                "-f", "mpegts", out_norm
+            ]
+            subprocess.run(ff_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    concat_txt = os.path.join(work_dir, "concat_list.txt")
+    with open(concat_txt, "w") as f:
+        for nf in norm_files:
+            f.write(f"file '{nf}'\n")
+
+    safe_ch = "".join(c for c in channel_name if c.isalnum() or c == "_")
+    output_mp4 = os.path.join(work_dir, f"Kompilasi_{safe_ch}_{int(cur_time//60)}Menit.mp4")
+    print(f"[*] Merging master compilation: {output_mp4}...")
+    merge_cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_txt, "-c", "copy", "-movflags", "+faststart", output_mp4]
+    subprocess.run(merge_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    desc_file = os.path.join(work_dir, f"DESKRIPSI_{safe_ch}.txt")
+    with open(desc_file, "w", encoding="utf-8") as f:
+        f.write(f"🔥 KOMPILASI NONSTOP {int(cur_time//60)} MENIT - {channel_name.upper()} 🔥\n\n")
+        f.write("⏱️ TIMESTAMPS / CHAPTERS:\n")
+        for ts, t, _ in timestamps:
+            f.write(f"{ts} - {t}\n")
+
+    print(f"\n[+] Master Video: {output_mp4}")
+    print(f"[+] Total Duration: {format_timestamp(cur_time)}")
+    print(f"[+] Description file: {desc_file}")
+
+if __name__ == "__main__":
+    main()

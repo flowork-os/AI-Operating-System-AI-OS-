@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Flowork Chrono Sentinel HUD
+Comment=Sovereign Power & Sleep Timer Desktop HUD
+Exec=systemctl --user start flowork-chrono-sentinel.service
+OnlyShowIn=XFCE;Flowork;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

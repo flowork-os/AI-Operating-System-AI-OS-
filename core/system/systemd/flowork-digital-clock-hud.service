@@ -1,0 +1,14 @@
+[Unit]
+Description=Flowork OS Sovereign Digital Clock & Calendar Desktop HUD
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/floworkos/bin/flowork-digital-clock-hud
+Restart=always
+RestartSec=3
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=graphical-session.target default.target

@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /usr/bin/python3 /opt/floworkos/engine/tarot_oracle/tarot_oracle.py "$@"

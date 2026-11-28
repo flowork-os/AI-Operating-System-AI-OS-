@@ -1,0 +1,41 @@
+[
+  {
+    "id": 1,
+    "source_id": "ref_railroads_01",
+    "source_url": "https://youtube.com/shorts/reference_railroad",
+    "source_title": "Why Perfect Railroads Don't Work (Conical Wheels)",
+    "topic_slug": "railroads_conical_wheels",
+    "status": "completed",
+    "output_video_path": "/home/awenkaudico/Documents/videos/finish/STICKMAN_RAILROADS_VIRAL_9X16.mp4",
+    "duration_seconds": 54.6,
+    "created_at": "2026-11-19T09:48:02.527969Z",
+    "completed_at": "2026-11-19T09:48:02.527969Z",
+    "notes": "Deliverable #1: Railroad conical self-centering wheel animation."
+  },
+  {
+    "id": 2,
+    "source_id": "ref_coaster_02",
+    "source_url": "https://youtube.com/shorts/reference_coaster",
+    "source_title": "Why Roller Coasters NEVER Use Circle Loops (12G Clothoid Loop)",
+    "topic_slug": "roller_coaster_circle_loop",
+    "status": "completed",
+    "output_video_path": "/home/awenkaudico/Documents/videos/finish/STICKMAN_COASTER_VIRAL_9X16.mp4",
+    "duration_seconds": 54.8,
+    "created_at": "2026-11-19T09:48:02.529763Z",
+    "completed_at": "2026-11-19T09:48:02.529763Z",
+    "notes": "Deliverable #2: Roller coaster 1895 circular 12G lethal loop vs clothoid teardrop loop."
+  },
+  {
+    "id": 4,
+    "source_id": "ref_fixation_03",
+    "source_url": "https://youtube.com/shorts/aD73kaL_PtY",
+    "source_title": "The Instinct That Makes You Crash (Target Fixation)",
+    "topic_slug": "target_fixation_crash",
+    "status": "completed",
+    "output_video_path": "/home/awenkaudico/Documents/videos/finish/STICKMAN_TARGET_FIXATION_9X16.mp4",
+    "duration_seconds": 54.7,
+    "created_at": "2026-11-19T10:23:12.801787+00:00",
+    "completed_at": "2026-11-19T10:23:12.801787+00:00",
+    "notes": "Deliverable #3: Target fixation stickman driving comedy, slapstick crash, and WWII discovery."
+  }
+]

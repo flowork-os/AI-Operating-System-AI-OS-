@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+if [ -n "$MRFLOW_CONNECTOR_DIR" ] && [ -f "$MRFLOW_CONNECTOR_DIR/bin/mrflow-gui.py" ]; then
+    BASE_DIR="$MRFLOW_CONNECTOR_DIR"
+elif [ -f "/opt/floworkos/apps/connector/bin/mrflow-gui.py" ]; then
+    BASE_DIR="/opt/floworkos/apps/connector"
+elif [ -f "$HOME/mrflow/connector/bin/mrflow-gui.py" ]; then
+    BASE_DIR="$HOME/mrflow/connector"
+else
+    USER_DIR="$(eval echo ~$USER)/mrflow/connector"
+    if [ -f "$USER_DIR/bin/mrflow-gui.py" ]; then
+        BASE_DIR="$USER_DIR"
+    else
+        echo "[MrFlow GUI] Error: mrflow-gui.py not found in standard paths." >&2
+        exit 1
+    fi
+fi
+
+exec python3 "$BASE_DIR/bin/mrflow-gui.py" "$@"

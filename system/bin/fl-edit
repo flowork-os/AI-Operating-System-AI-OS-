@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""
+Flowork Sovereign File Operator (fl-edit)
+Standard Linux CLI Utility for Safe File Viewing, Editing, and Atomic Replacement.
+Strictly Enforces @lock and @freez Sanctity (Doktrin Kedaulatan Flowork OS).
+
+Author: Dr. Flow (floworkos.com)
+Authority: AWENKAUDICO & TEGUHFX (LV99 Super Admin)
+"""
+
+import sys
+import os
+import re
+import shutil
+import argparse
+import subprocess
+from pathlib import Path
+
+# Terminal Colors
+C_CYAN = "\033[96m"
+C_GREEN = "\033[92m"
+C_YELLOW = "\033[93m"
+C_RED = "\033[91m"
+C_BOLD = "\033[1m"
+C_DIM = "\033[2m"
+C_RESET = "\033[0m"
+
+LOCK_TOKENS = ["@lock", "@freez", "@endlock", "@endfreez"]
+
+BINARY_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".svgz",
+    ".tar", ".gz", ".xz", ".bz2", ".zip", ".7z", ".iso", ".deb",
+    ".so", ".a", ".o", ".dylib", ".dll", ".exe", ".bin", ".pyc",
+    ".mp3", ".wav", ".mp4", ".mkv", ".webm", ".woff", ".woff2"
+}
+
+def is_binary_file(filepath: Path) -> bool:
+    if filepath.suffix.lower() in BINARY_EXTENSIONS:
+        return True
+    try:
+        with open(filepath, "tr") as f:
+            f.read(1024)
+            return False
+    except UnicodeDecodeError:
+        return True
+    except Exception:
+        return False
+
+def compute_locked_lines(lines: list) -> set[int]:
+    """Returns a set of 0-based line indices that are locked either in-line or within a block."""
+    locked = set()
+    in_block = False
+    for i, line in enumerate(lines):
+        has_start_token = any(tok in line for tok in ["@lock", "@freez"])
+        has_end_token = any(tok in line for tok in ["@endlock", "@endfreez"])
+        
+        if has_start_token:
+            in_block = True
+            locked.add(i)
+        elif in_block:
+            locked.add(i)
+            if has_end_token:
+                in_block = False
+        elif has_end_token:
+            locked.add(i)
+    return locked
+
+
+# -----------------------------------------------------------------------------
+# COMMAND: VIEW
+# -----------------------------------------------------------------------------
+def cmd_view(args):
+    filepath = Path(args.file).resolve()
+    if not filepath.exists():
+        print(f"{C_RED}Error: File not found: {filepath}{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    if is_binary_file(filepath):
+        sz = filepath.stat().st_size
+        print(f"{C_YELLOW}Notice: {filepath.name} is a binary file ({sz} bytes). Use binwalk, r2, or hex dump to inspect.{C_RESET}")
+        return
+
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+    except Exception as e:
+        print(f"{C_RED}Error reading file: {e}{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    total_lines = len(lines)
+    start_line = max(1, args.start) if args.start else 1
+    end_line = min(total_lines, args.end) if args.end else total_lines
+
+    if start_line > total_lines:
+        print(f"{C_YELLOW}Start line {start_line} exceeds file length ({total_lines} lines).{C_RESET}")
+        return
+
+    print(f"{C_CYAN}=== {filepath} (Lines {start_line}-{end_line} of {total_lines}) ==={C_RESET}")
+    locked_lines = compute_locked_lines(lines)
+    for idx in range(start_line - 1, end_line):
+        line_num = idx + 1
+        line_content = lines[idx].rstrip("\r\n")
+        # Highlight @lock lines
+        if idx in locked_lines:
+            num_str = f"{C_RED}{C_BOLD}{line_num:5d} 🔒 |{C_RESET}"
+            content_str = f"{C_YELLOW}{line_content}{C_RESET}"
+        else:
+            num_str = f"{C_DIM}{line_num:5d} |{C_RESET}"
+            content_str = line_content
+        print(f"{num_str} {content_str}")
+
+# -----------------------------------------------------------------------------
+# COMMAND: WRITE
+# -----------------------------------------------------------------------------
+def cmd_write(args):
+    filepath = Path(args.file).resolve()
+    
+    # Read content from args or stdin
+    if args.stdin:
+        content = sys.stdin.read()
+    elif args.content is not None:
+        content = args.content
+    else:
+        print(f"{C_RED}Error: Specify content string or use --stdin to stream input.{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    # Check lock if overwriting existing file
+    if filepath.exists() and not args.append:
+        try:
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                existing_lines = f.readlines()
+            locked_lines = compute_locked_lines(existing_lines)
+            if locked_lines:
+                print(f"{C_RED}{C_BOLD}[GEMBOK DOKTRIN VIOLATION] Aborting write! File contains {len(locked_lines)} locked line(s).{C_RESET}", file=sys.stderr)
+                sys.exit(2)
+        except Exception:
+            pass
+
+    # Ensure parent dir
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+
+    mode = "a" if args.append else "w"
+    try:
+        with open(filepath, mode, encoding="utf-8") as f:
+            f.write(content)
+        action = "Appended to" if args.append else "Written"
+        print(f"{C_GREEN}✓ Successfully {action.lower()} {filepath} ({len(content)} bytes){C_RESET}")
+    except Exception as e:
+        print(f"{C_RED}Error writing file: {e}{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+# -----------------------------------------------------------------------------
+# COMMAND: REPLACE
+# -----------------------------------------------------------------------------
+def cmd_replace(args):
+    filepath = Path(args.file).resolve()
+    if not filepath.exists():
+        print(f"{C_RED}Error: File not found: {filepath}{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    target_str = args.target
+    replacement_str = args.replacement
+
+    if not target_str:
+        print(f"{C_RED}Error: Target string (--target) cannot be empty.{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read()
+            lines = content.splitlines(keepends=True)
+    except Exception as e:
+        print(f"{C_RED}Error reading file: {e}{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    if target_str not in content:
+        print(f"{C_YELLOW}Notice: Target string not found in {filepath.name}. Zero modifications made.{C_RESET}")
+        return
+
+    # Check lock sanctity on lines overlapping target
+    locked_lines = compute_locked_lines(lines)
+    start_char = content.find(target_str)
+    end_char = start_char + len(target_str)
+    cur_pos = 0
+    for i, line in enumerate(lines):
+        line_len = len(line)
+        line_start = cur_pos
+        line_end = cur_pos + line_len
+        if max(start_char, line_start) < min(end_char, line_end):
+            if i in locked_lines:
+                print(f"{C_RED}{C_BOLD}[GEMBOK DOKTRIN VIOLATION] Modification blocked! Target line {i+1} is protected by @lock:{C_RESET}", file=sys.stderr)
+                print(f"  {line.strip()}", file=sys.stderr)
+                sys.exit(2)
+        cur_pos = line_end
+
+    # Perform replacement
+    count = 0
+    if args.all:
+        count = content.count(target_str)
+        new_content = content.replace(target_str, replacement_str)
+    else:
+        count = 1
+        new_content = content.replace(target_str, replacement_str, 1)
+
+    if args.dry_run:
+        print(f"{C_YELLOW}[DRY RUN] Would replace {count} occurrence(s) in {filepath}{C_RESET}")
+        return
+
+    # Atomic write
+    tmp_path = filepath.with_suffix(filepath.suffix + ".fl_tmp")
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        shutil.copymode(filepath, tmp_path)
+        tmp_path.replace(filepath)
+        print(f"{C_GREEN}✓ Successfully replaced {count} occurrence(s) in {filepath}{C_RESET}")
+    except Exception as e:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        print(f"{C_RED}Error writing replacement: {e}{C_RESET}", file=sys.stderr)
+        sys.exit(1)
+
+# -----------------------------------------------------------------------------
+# COMMAND: GUI & CODE LAUNCHERS
+# -----------------------------------------------------------------------------
+def cmd_gui(args):
+    filepath = Path(args.file).resolve()
+    subprocess.Popen(["gnome-text-editor", str(filepath)])
+    print(f"{C_GREEN}✓ Launched GNOME Text Editor for {filepath.name}{C_RESET}")
+
+def cmd_code(args):
+    target = Path(args.path).resolve() if args.path else Path.cwd()
+    subprocess.Popen(["code", str(target)])
+    print(f"{C_GREEN}✓ Launched Visual Studio Code for {target}{C_RESET}")
+
+# -----------------------------------------------------------------------------
+# CLI PARSER
+# -----------------------------------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser(
+        prog="fl-edit",
+        description="Flowork Sovereign File Operator — Native Linux Editing Utility with @lock Sanctity Protection",
+    )
+    subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
+
+    # view
+    p_view = subparsers.add_parser("view", help="View file contents with line numbering and @lock indicators")
+    p_view.add_argument("file", help="Path to file to inspect")
+    p_view.add_argument("-s", "--start", type=int, help="Start line (1-indexed)")
+    p_view.add_argument("-e", "--end", type=int, help="End line (1-indexed)")
+    p_view.set_defaults(func=cmd_view)
+
+    # write
+    p_write = subparsers.add_parser("write", help="Write or append content to a file atomically")
+    p_write.add_argument("file", help="Target file path")
+    p_write.add_argument("content", nargs="?", help="Content string to write")
+    p_write.add_argument("--stdin", action="store_true", help="Read content from stdin")
+    p_write.add_argument("-a", "--append", action="store_true", help="Append instead of overwriting")
+    p_write.set_defaults(func=cmd_write)
+
+    # replace
+    p_replace = subparsers.add_parser("replace", help="Surgically replace target string while strictly enforcing @lock protection")
+    p_replace.add_argument("file", help="Target file path")
+    p_replace.add_argument("-t", "--target", required=True, help="Exact string/block to find and replace")
+    p_replace.add_argument("-r", "--replacement", required=True, help="New replacement string/block")
+    p_replace.add_argument("-a", "--all", action="store_true", help="Replace all occurrences (default: first occurrence only)")
+    p_replace.add_argument("-d", "--dry-run", action="store_true", help="Preview changes without modifying file")
+    p_replace.set_defaults(func=cmd_replace)
+
+    # gui
+    p_gui = subparsers.add_parser("gui", help="Open file in sovereign GNOME Text Editor")
+    p_gui.add_argument("file", help="File to open")
+    p_gui.set_defaults(func=cmd_gui)
+
+    # code
+    p_code = subparsers.add_parser("code", help="Open file or workspace in Visual Studio Code")
+    p_code.add_argument("path", nargs="?", default=".", help="Path to file or folder to open in VS Code")
+    p_code.set_defaults(func=cmd_code)
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
+    args = parser.parse_args()
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()

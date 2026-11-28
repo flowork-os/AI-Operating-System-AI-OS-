@@ -1,0 +1,8 @@
+[Nemo Action]
+Name=🧹 Flowork: Vocal & Audio De-Noise
+Comment=Strip background hiss, breath noise, and electrical hum using FFT filters
+Exec=/opt/floworkos/bin/flowork-audio-transformer denoise %F
+Icon-Name=audio-volume-high
+Selection=notnone
+Extensions=mp3;wav;flac;m4a;ogg;opus;aac;
+Quote=double
