@@ -1,15 +1,15 @@
 {
   "format_version": "1.1",
-  "generated_at": "2026-11-28T14:58:40Z",
+  "generated_at": "2026-11-28T15:36:37Z",
   "version": "1.0.0",
-  "manifest_id": "665f37a17cf12c7261e1aee5f6a9964e5880d715cdc533514afed781c886eee0",
-  "commit": "735bd35e132e579f3966d9846089ef761862a4ff",
+  "manifest_id": "46abc2858fcaddba0b1ef1fab4ce939a13223bbc3f7670deb40ad7ff046f8024",
+  "commit": "04b0b05ebf14961703b5306786e3cd43d686605b",
   "branch": "main",
   "repository": "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git",
   "raw_base_url": "https://raw.githubusercontent.com/flowork-os/AI-Operating-System-AI-OS-/main",
-  "total_files": 23903,
+  "total_files": 23916,
   "total_symlinks": 207,
-  "total_bytes": 789345913,
+  "total_bytes": 790551483,
   "files": {
     "core/ARCHITECT.md": {
       "sha256": "f4807c67526e378d33e3d99169c1873d9013770102c4b9da28d89cfb9ff1fe68",
@@ -125922,7 +125922,7 @@
       "target": "/opt/floworkos/system/environment"
     },
     "core/system/version.json": {
-      "sha256": "76902b6ca7396d51996806bf06db84d9a3a642f992adb70fda97c6fa715c2211",
+      "sha256": "7b6e69dd02b66f2bf51214d572ba8d4fe2b383815d1858422fded22b289a9db3",
       "size": 452,
       "mode": "664",
       "target": "/opt/floworkos/system/version.json"
@@ -139914,8 +139914,8 @@
       "target": "/opt/floworkos/engine/orbital_reactor/reactor_hud.py"
     },
     "core/engine/orbital_reactor/cyber_wing.py": {
-      "sha256": "108a036abe526cd1476640d6ac5f0d0c7a6e197cabc683abe9a01f0d5ddf2926",
-      "size": 45939,
+      "sha256": "569df58059ce161a739ace0a318ba741ccca10aaa1b88fa864b15e73d2963402",
+      "size": 52803,
       "mode": "755",
       "target": "/opt/floworkos/engine/orbital_reactor/cyber_wing.py"
     },
@@ -140026,6 +140026,84 @@
       "size": 235,
       "mode": "664",
       "target": "/opt/floworkos/mcp/downflow/manifest.json"
+    },
+    "core/scratch/concept_top_all.png": {
+      "sha256": "e0fa82c541a6ce559ce7f015ccd30eea310e5d0a719cd4a7c8e46db23b949ce3",
+      "size": 151178,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/concept_top_all.png"
+    },
+    "core/scratch/node_suno.png": {
+      "sha256": "293ac3d9c0a4248d2b1a497e2fa8bd99416b2a6096d52f6376f10cf598d24446",
+      "size": 21697,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/node_suno.png"
+    },
+    "core/scratch/center_right.png": {
+      "sha256": "b115461808a19a17a6b2eaea56cb38a88e01294d668505c1760173b1496ded2f",
+      "size": 88837,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/center_right.png"
+    },
+    "core/scratch/notch_left_concept.png": {
+      "sha256": "414c151ae8072907b6dff6891cb3e81bd10e765c332f0ad270facd813a7a03bf",
+      "size": 34075,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/notch_left_concept.png"
+    },
+    "core/scratch/crypto_below_left.png": {
+      "sha256": "4e6e2e18ba312d007fc53bff90cadd344f737e1c1ea07247e6465b608c639d4f",
+      "size": 27695,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/crypto_below_left.png"
+    },
+    "core/scratch/notch_right_concept.png": {
+      "sha256": "deee7ba52ef910c4a83c13c61dd29ea83451004179639658f07d979e5380e52e",
+      "size": 40520,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/notch_right_concept.png"
+    },
+    "core/scratch/forex_above_left.png": {
+      "sha256": "9e5a80e7f9b17b3b1e1ae4c2b3aa8a035e0d80509a71b89ad7b66959bc357fbf",
+      "size": 27640,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/forex_above_left.png"
+    },
+    "core/scratch/node_4k.png": {
+      "sha256": "c51d1517824406b08f6c3690aa596c91b46aaa4ebe3266f6dbfef8496f3441f0",
+      "size": 18396,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/node_4k.png"
+    },
+    "core/scratch/crypto_below_right.png": {
+      "sha256": "018a15ee7b827bbe55af4823df9ed998e21984c9344c517be53c9b1dd846e275",
+      "size": 28862,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/crypto_below_right.png"
+    },
+    "core/scratch/right_crop.png": {
+      "sha256": "643f89aaf51e56f1cf58a5bf798224e1db8f0386c1ad40ccf547cea22b16c706",
+      "size": 312377,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/right_crop.png"
+    },
+    "core/scratch/concept_bot_all.png": {
+      "sha256": "667be7d94f0f5da05d24b21598601891c25366ac616017be05aa743b6cf2d954",
+      "size": 141884,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/concept_bot_all.png"
+    },
+    "core/scratch/left_crop.png": {
+      "sha256": "fe4a2fba89ef1a9a845e31a26d9f062d1cbaac13e7bcc8a4d2886ed7472220c3",
+      "size": 271789,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/left_crop.png"
+    },
+    "core/scratch/forex_above_right.png": {
+      "sha256": "c6a737dc7405953022457dc7f66d0a2bbb1978fc1d8dfe7b1676e6f3f964b1ab",
+      "size": 33756,
+      "mode": "664",
+      "target": "/opt/floworkos/scratch/forex_above_right.png"
     },
     "core/installer/calamares/settings.conf": {
       "sha256": "d3622b648b3217e5c42e8e6fe9b12c51f8daa1f2dc6d09ec9c48a8ea3fa32679",

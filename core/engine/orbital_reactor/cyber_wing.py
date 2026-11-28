@@ -157,27 +157,10 @@ class CyberWingWindow(Gtk.Window):
             self.set_visual(visual)
         self.set_app_paintable(True)
 
-        sw = screen.get_width()
-        sh = screen.get_height()
-
-        # Strict Safe Bounds: MUST NOT cover Forex Calendar (top y<245) or Crypto Ticker (bottom y>825)
-        # Vertical corridor: y=245 to y=815 (Height: 570px)
-        self.win_w = 480
-        self.win_h = 570
-        self.set_size_request(self.win_w, self.win_h)
-
-        # Precise Docking Positions flanking the central orbital reactor
-        # Screen center = (sw/2, sh/2) = (1280, 540) on 2560x1080
-        if self.side == "left":
-            # Left wing sits at x ≈ 110 on ultrawide (2560), completely clear of JPY Forex item (x>610)
-            self.dock_x = 110 if sw >= 2400 else max(20, int((sw / 2.0) - 340.0 - self.win_w - 40.0))
-        else:
-            # Right wing sits at x ≈ 1970 on ultrawide (2560), completely clear of USD Forex item
-            self.dock_x = (sw - 110 - self.win_w) if sw >= 2400 else min(sw - self.win_w - 20, int((sw / 2.0) + 340.0 + 40.0))
-
-        # Positioned strictly between y=245 and y=815 (100% Clear of Forex & Crypto)
-        self.dock_y = 245 if sh >= 1050 else max(70, int((sh - self.win_h) / 2.0))
-        self.move(self.dock_x, self.dock_y)
+        # Dynamically calculate responsive geometry matching Forex, Crypto & Orbital Reactor
+        self.update_geometry()
+        screen.connect("size-changed", lambda *_: self.update_geometry())
+        screen.connect("monitors-changed", lambda *_: self.update_geometry())
 
         # Active App in this Wing (Single-Slot Invariant!)
         self.active_app = None  # e.g. "timer", "system", etc.
@@ -235,6 +218,100 @@ class CyberWingWindow(Gtk.Window):
         # Sync existing timer state if present
         self._sync_timer_state()
         self._start_pulse_ticker()
+
+    def update_geometry(self):
+        """
+        Dynamically calculates responsive wing geometry:
+        - TOP: Stops strictly below Forex Calendar line 3 (with safe gap)
+        - BOTTOM: Stops strictly above Crypto Ticker line 1 (with safe gap)
+        - WIDTH: Left wing matches Forex/Crypto left 4 columns; Right wing matches right 4 columns
+        - NOTCH: Inward chevron apex stops precisely in front of central satellite nodes (4K RENDER / SUNO 59S)
+        - RESPONSIVE: Fully recalculates on any monitor resolution (Ultrawide, FHD, Laptop, QHD, etc.)
+        """
+        screen = self.get_screen()
+        sw = max(640, screen.get_width())
+        sh = max(480, screen.get_height())
+
+        # Exact scale formula matching reactor_hud.py & financial_orbit.py
+        self.ui_scale = max(0.52, min(1.0, min(float(sw) / 1920.0, float(sh) / 1080.0)))
+        scale = self.ui_scale
+
+        cx = sw / 2.0
+        cy = sh / 2.0
+
+        gap_center = 142.0 * scale
+        col_pitch = 158.0 * scale
+        col_half_w = col_pitch / 2.0
+
+        # Reactor HUD window geometry matching reactor_hud.py
+        hud_h = min(816, max(400, sh - 140))
+        hud_pos_y = max(132, int((sh - hud_h) // 2))
+
+        # Vertical Safe Corridor: strictly between Forex bottom and Crypto top
+        # Forex in reactor_hud: y_top = 92 * scale, line 3 is at y_top + 30 * scale, text height ~14 * scale
+        forex_bottom_screen = hud_pos_y + (92.0 + 44.0) * scale
+        crypto_top_screen = hud_pos_y + 705.0 * scale
+
+        gap_v = 18.0 * scale
+        self.dock_y = int(forex_bottom_screen + gap_v)
+        bottom_y = int(crypto_top_screen - gap_v)
+        self.win_h = max(300, bottom_y - self.dock_y)
+
+        # Horizontal Safe Span: matching Forex & Crypto columns
+        col_0_x = cx - gap_center - 3.0 * col_pitch
+        col_3_x = cx - gap_center - 0.0 * col_pitch
+        col_4_x = cx + gap_center + 0.0 * col_pitch
+        col_7_x = cx + gap_center + 3.0 * col_pitch
+
+        r_orbit = 222.0 * scale
+        r_node = 44.0 * scale
+        horn_clearance = 54.0 * scale
+        notch_flange = 36.0 * scale
+
+        # Outermost edges of Forex news columns
+        col_0_outer = col_0_x - 44.0 * scale
+        col_7_outer = col_7_x + 44.0 * scale
+
+        if self.side == "left":
+            # 4K RENDER equator node (180 deg) - Horns stay clear of circle
+            left_node_outer = (cx - r_orbit) - r_node
+            horn_screen_x = int(left_node_outer - horn_clearance)
+            notch_apex_screen = horn_screen_x - notch_flange
+
+            # Left boundary aligns flush with the outer edge ("akhir") of Forex news (Col 0)
+            self.dock_x = int(col_0_outer)
+            self.win_w = max(240, horn_screen_x - self.dock_x)
+
+            # Inward notch apex indents smoothly
+            self.notch_apex_x = notch_apex_screen - self.dock_x
+            self.notch_depth = self.win_w - self.notch_apex_x
+
+            self.content_x = 16.0 * scale
+            self.content_w = max(200.0 * scale, self.notch_apex_x - self.content_x - 14.0 * scale)
+        else:
+            # SUNO 59S equator node (0 deg) - Horns stay clear of circle
+            right_node_outer = (cx + r_orbit) + r_node
+            horn_screen_x = int(right_node_outer + horn_clearance)
+            notch_apex_screen = horn_screen_x + notch_flange
+
+            # Right boundary aligns flush with outer edge ("akhir") of Forex news (Col 7)
+            self.dock_x = horn_screen_x
+            self.win_w = max(240, int(col_7_outer) - self.dock_x)
+
+            # Inward notch apex indents smoothly
+            self.notch_apex_x = notch_apex_screen - self.dock_x
+            self.notch_depth = self.notch_apex_x
+
+            self.content_x = self.notch_apex_x + 14.0 * scale
+            self.content_w = max(200.0 * scale, (self.win_w - 16.0 * scale) - self.content_x)
+
+        self.notch_half_h = 76.0 * scale
+        self.reactor_local_y = cy - self.dock_y
+
+        self.set_size_request(self.win_w, self.win_h)
+        self.resize(self.win_w, self.win_h)
+        self.move(self.dock_x, self.dock_y)
+        self.queue_draw()
 
     def _sync_timer_state(self):
         st = get_active_state()
@@ -374,10 +451,13 @@ class CyberWingWindow(Gtk.Window):
         pctx = PangoCairo.create_context(cr)
         layout = Pango.Layout.new(pctx)
 
-        # ── 2. Wing Header Bar ──
+        # ── 2. Horn Tactical Telemetry & Cyber Circuitry ──
+        self._draw_horn_telemetry(cr, layout, w, h, p)
+
+        # ── 3. Wing Header Bar ──
         self._draw_wing_header(cr, layout, w, h, p)
 
-        # ── 3. Render Active App Content inside Wing ──
+        # ── 4. Render Active App Content inside Wing ──
         if self.active_app == "timer":
             self._draw_timer_content(cr, layout, w, h, p)
         else:
@@ -388,14 +468,15 @@ class CyberWingWindow(Gtk.Window):
 
     def _build_wing_path(self, cr, w, h):
         """Constructs the angular cyberpunk wing with inward chevron notch matching user sketch."""
-        pad = 8.0
-        r = 16.0  # Corner radius
+        scale = getattr(self, "ui_scale", 1.0)
+        pad = 8.0 * scale
+        r = 16.0 * scale
 
         x0, y0 = pad, pad
         x1, y1 = w - pad, h - pad
-        mid_y = (y0 + y1) / 2.0
-        notch_depth = 58.0  # Pronounced stealth cockpit chevron depth
-        notch_half_h = 88.0  # Vertical span flanking reactor node
+        mid_y = getattr(self, "reactor_local_y", (y0 + y1) / 2.0)
+        notch_apex = getattr(self, "notch_apex_x", (w - 60.0 if self.side == "left" else 60.0))
+        notch_half_h = getattr(self, "notch_half_h", 76.0 * scale)
 
         cr.new_path()
         if self.side == "left":
@@ -403,13 +484,13 @@ class CyberWingWindow(Gtk.Window):
             cr.move_to(x0 + r, y0)
             cr.line_to(x1 - r, y0)
             cr.arc(x1 - r, y0 + r, r, -math.pi / 2, 0)
-            # Upper right edge down to notch
+            # Upper right horn edge down to notch
             cr.line_to(x1, mid_y - notch_half_h)
-            # Inward notch (indentation towards left)
-            cr.line_to(x1 - notch_depth, mid_y)
-            # Notch recovery outward
+            # Inward notch (indentation towards left towards apex)
+            cr.line_to(notch_apex, mid_y)
+            # Notch recovery outward towards lower horn
             cr.line_to(x1, mid_y + notch_half_h)
-            # Lower right edge down
+            # Lower right horn edge down
             cr.line_to(x1, y1 - r)
             cr.arc(x1 - r, y1 - r, r, 0, math.pi / 2)
             # Bottom edge to left
@@ -429,34 +510,99 @@ class CyberWingWindow(Gtk.Window):
             # Bottom edge to left
             cr.line_to(x0 + r, y1)
             cr.arc(x0 + r, y1 - r, r, math.pi / 2, math.pi)
-            # Lower left edge up to notch
+            # Lower left horn edge up to notch
             cr.line_to(x0, mid_y + notch_half_h)
-            # Inward notch (indentation towards right)
-            cr.line_to(x0 + notch_depth, mid_y)
-            # Notch recovery outward
+            # Inward notch (indentation towards right towards apex)
+            cr.line_to(notch_apex, mid_y)
+            # Notch recovery outward towards upper horn
             cr.line_to(x0, mid_y - notch_half_h)
-            # Upper left edge up
+            # Upper left horn edge up
             cr.line_to(x0, y0 + r)
             cr.arc(x0 + r, y0 + r, r, math.pi, 3 * math.pi / 2)
 
         cr.close_path()
 
+    def _draw_horn_telemetry(self, cr, layout, w, h, p):
+        pad = 8.0
+        cr.save()
+        if self.side == "left":
+            horn_x0 = getattr(self, "notch_apex_x", w - 180.0) + 14.0
+            horn_x1 = w - pad - 12.0
+            if horn_x1 > horn_x0 + 20:
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.22 * p)
+                cr.set_line_width(1.0)
+                for lx in range(int(horn_x0), int(horn_x1), 16):
+                    cr.move_to(lx, 16)
+                    cr.line_to(lx + 8, 30)
+                cr.stroke()
+
+                layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 6.8"))
+                layout.set_text("ORBITAL FLANK // L-01", -1)
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.60 * p)
+                cr.move_to(horn_x0 + 4, 38)
+                PangoCairo.show_layout(cr, layout)
+
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.22 * p)
+                cr.set_line_width(1.0)
+                for lx in range(int(horn_x0), int(horn_x1), 16):
+                    cr.move_to(lx, h - 30)
+                    cr.line_to(lx + 8, h - 16)
+                cr.stroke()
+
+                layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 6.8"))
+                layout.set_text("SYS SYNC // LOCKED", -1)
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.60 * p)
+                cr.move_to(horn_x0 + 4, h - 46)
+                PangoCairo.show_layout(cr, layout)
+        else:
+            horn_x0 = pad + 12.0
+            horn_x1 = getattr(self, "notch_apex_x", 180.0) - 14.0
+            if horn_x1 > horn_x0 + 20:
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.22 * p)
+                cr.set_line_width(1.0)
+                for lx in range(int(horn_x0), int(horn_x1), 16):
+                    cr.move_to(lx, 16)
+                    cr.line_to(lx - 8, 30)
+                cr.stroke()
+
+                layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 6.8"))
+                layout.set_text("ORBITAL FLANK // R-02", -1)
+                cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.60 * p)
+                cr.move_to(horn_x0 + 4, 38)
+                PangoCairo.show_layout(cr, layout)
+
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.22 * p)
+                cr.set_line_width(1.0)
+                for lx in range(int(horn_x0), int(horn_x1), 16):
+                    cr.move_to(lx, h - 30)
+                    cr.line_to(lx - 8, h - 16)
+                cr.stroke()
+
+                layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 6.8"))
+                layout.set_text("SYS SYNC // LOCKED", -1)
+                cr.set_source_rgba(C_GREEN[0], C_GREEN[1], C_GREEN[2], 0.60 * p)
+                cr.move_to(horn_x0 + 4, h - 46)
+                PangoCairo.show_layout(cr, layout)
+        cr.restore()
+
     def _draw_wing_header(self, cr, layout, w, h, p):
         pad = 8.0
         sep_y = 52.0
+        cx = getattr(self, "content_x", 24.0)
+        cw = getattr(self, "content_w", w - 48.0)
 
         # Separator line
         cr.new_path()
         cr.set_source_rgba(0.2, 0.4, 0.6, 0.22 * p)
-        cr.move_to(22, sep_y)
-        cr.line_to(w - 22, sep_y)
+        cr.move_to(cx, sep_y)
+        cr.line_to(cx + cw, sep_y)
         cr.set_line_width(1.0)
         cr.stroke()
 
         # Title indicator pill
         cr.new_path()
         act_col = ACTIONS[self.timer_action]["color"] if self.active_app == "timer" else C_CYAN
-        dot_x, dot_y, dot_r = 30, 28, 4.5
+        dot_x, dot_y, dot_r = cx + 8, 28, 4.5
         cr.arc(dot_x, dot_y, dot_r, 0, 2 * math.pi)
         cr.set_source_rgba(act_col[0], act_col[1], act_col[2], 0.95 * p)
         cr.fill()
@@ -472,11 +618,11 @@ class CyberWingWindow(Gtk.Window):
         tw, th = layout.get_pixel_size()
 
         cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 0.95 * p)
-        cr.move_to(44, 28 - th / 2)
+        cr.move_to(cx + 22, 28 - th / 2)
         PangoCairo.show_layout(cr, layout)
 
         # Retract / Close arrow button
-        cb_x, cb_y, cb_r = w - 32, 28, 12
+        cb_x, cb_y, cb_r = cx + cw - 14, 28, 12
         cr.new_path()
         cr.arc(cb_x, cb_y, cb_r, 0, 2 * math.pi)
         if self.hovered_close:
@@ -508,12 +654,14 @@ class CyberWingWindow(Gtk.Window):
         tab_y = 66
         tab_h = 36
         gap = 6
-        avail_w = w - 44
+        cx = getattr(self, "content_x", 24.0)
+        cw = getattr(self, "content_w", w - 48.0)
+        avail_w = cw
         tab_w = (avail_w - (len(ACTIONS) - 1) * gap) / len(ACTIONS)
         self._action_hitboxes = []
 
         for i, act in enumerate(ACTIONS):
-            tx = 22 + i * (tab_w + gap)
+            tx = cx + i * (tab_w + gap)
             is_sel = (i == self.timer_action)
             is_hov = (i == self.hovered_action)
             col = act["color"]
@@ -560,7 +708,9 @@ class CyberWingWindow(Gtk.Window):
             self._draw_timer_setup(cr, layout, w, h, p)
 
     def _draw_timer_setup(self, cr, layout, w, h, p):
-        avail_w = w - 44
+        cx = getattr(self, "content_x", 24.0)
+        cw = getattr(self, "content_w", w - 48.0)
+        avail_w = cw
         act_col = ACTIONS[self.timer_action]["color"]
 
         # Presets row
@@ -568,7 +718,7 @@ class CyberWingWindow(Gtk.Window):
         layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 8"))
         layout.set_text("DURATION PRESET", -1)
         cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.75 * p)
-        cr.move_to(24, pre_label_y)
+        cr.move_to(cx + 2, pre_label_y)
         PangoCairo.show_layout(cr, layout)
 
         pre_y = 130
@@ -579,7 +729,7 @@ class CyberWingWindow(Gtk.Window):
         self._preset_hitboxes = []
 
         for i, pre in enumerate(PRESETS):
-            px = 22 + i * (pre_w + pre_gap)
+            px = cx + i * (pre_w + pre_gap)
             is_sel = (self.timer_seconds == pre["seconds"])
             is_hov = (i == self.hovered_preset)
 
@@ -620,7 +770,7 @@ class CyberWingWindow(Gtk.Window):
         well_y = 172
         well_h = 136
         well_w = avail_w
-        well_x = 22
+        well_x = cx
         self._time_well_hitbox = (well_x, well_y, well_w, well_h)
 
         cr.new_path()
@@ -633,19 +783,18 @@ class CyberWingWindow(Gtk.Window):
 
         # Step Adjustment Buttons Layout
         self._step_hitboxes = []
-        step_btn_w = 46
-        step_btn_h = 32
+        step_btn_w = 34
+        step_btn_h = 28
         step_y_top = well_y + 24
         step_y_bot = well_y + 70
 
         left_steps = [
-            ("-10m", -600, well_x + 14, step_y_top),
-            ("-1m",  -60,  well_x + 14, step_y_bot),
+            ("-10m", -600, well_x + 10, step_y_top),
+            ("-1m",  -60,  well_x + 10, step_y_bot),
         ]
         right_steps = [
-            ("+1m",  +60,  well_x + well_w - 14 - step_btn_w * 2 - 6, step_y_top),
-            ("+5m",  +300, well_x + well_w - 14 - step_btn_w, step_y_top),
-            ("+15m", +900, well_x + well_w - 14 - step_btn_w * 2 - 6, step_y_bot, step_btn_w * 2 + 6),
+            ("+1m",  +60,  well_x + well_w - 10 - step_btn_w, step_y_top),
+            ("+5m",  +300, well_x + well_w - 10 - step_btn_w, step_y_bot),
         ]
 
         for s in left_steps:
@@ -653,30 +802,28 @@ class CyberWingWindow(Gtk.Window):
             self._draw_step_btn(cr, layout, lbl, delta, sx, sy, step_btn_w, step_btn_h, p)
 
         for s in right_steps:
-            if len(s) == 5:
-                lbl, delta, sx, sy, sw = s
-            else:
-                lbl, delta, sx, sy = s
-                sw = step_btn_w
-            self._draw_step_btn(cr, layout, lbl, delta, sx, sy, sw, step_btn_h, p)
+            lbl, delta, sx, sy = s
+            self._draw_step_btn(cr, layout, lbl, delta, sx, sy, step_btn_w, step_btn_h, p)
 
         # Center Digital Clock
         hours = self.timer_seconds // 3600
         mins = (self.timer_seconds % 3600) // 60
         secs = self.timer_seconds % 60
 
-        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 30"))
+        layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 24"))
         time_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
         layout.set_text(time_str, -1)
         tw, th = layout.get_pixel_size()
 
+        clock_cx = well_x + well_w / 2
+
         # Ambient glow shadow
         cr.set_source_rgba(act_col[0], act_col[1], act_col[2], 0.25 * p)
-        cr.move_to(w / 2 - tw / 2, well_y + 42 - th / 2 + 1)
+        cr.move_to(clock_cx - tw / 2, well_y + 42 - th / 2 + 1)
         PangoCairo.show_layout(cr, layout)
 
         cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 0.98 * p)
-        cr.move_to(w / 2 - tw / 2, well_y + 42 - th / 2)
+        cr.move_to(clock_cx - tw / 2, well_y + 42 - th / 2)
         PangoCairo.show_layout(cr, layout)
 
         # Sub-labels
@@ -684,7 +831,7 @@ class CyberWingWindow(Gtk.Window):
         layout.set_text("HRS       MINS       SECS", -1)
         sw, _ = layout.get_pixel_size()
         cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.70 * p)
-        cr.move_to(w / 2 - sw / 2, well_y + 72)
+        cr.move_to(clock_cx - sw / 2, well_y + 72)
         PangoCairo.show_layout(cr, layout)
 
         # Scroll hint
@@ -692,7 +839,7 @@ class CyberWingWindow(Gtk.Window):
         layout.set_text("▲ SCROLL MOUSE WHEEL ▲", -1)
         hw, _ = layout.get_pixel_size()
         cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.50 * p)
-        cr.move_to(w / 2 - hw / 2, well_y + well_h - 18)
+        cr.move_to(clock_cx - hw / 2, well_y + well_h - 18)
         PangoCairo.show_layout(cr, layout)
 
         # Target Timestamp info
@@ -705,14 +852,14 @@ class CyberWingWindow(Gtk.Window):
         layout.set_text(txt, -1)
         tw, _ = layout.get_pixel_size()
         cr.set_source_rgba(act_col[0], act_col[1], act_col[2], 0.85 * p)
-        cr.move_to(w / 2 - tw / 2, well_y + well_h + 16)
+        cr.move_to(clock_cx - tw / 2, well_y + well_h + 16)
         PangoCairo.show_layout(cr, layout)
 
         # Initiate Button
         btn_y = well_y + well_h + 46
-        btn_w = 260
+        btn_w = min(260.0 * getattr(self, "ui_scale", 1.0), avail_w - 20)
         btn_h = 46
-        btn_x = (w - btn_w) / 2
+        btn_x = well_x + (well_w - btn_w) / 2
         self._initiate_hitbox = (btn_x, btn_y, btn_w, btn_h)
 
         cr.new_path()
@@ -749,7 +896,7 @@ class CyberWingWindow(Gtk.Window):
         layout.set_text("FLOWORK OS SOVEREIGN WING HUD • PERSISTENT DAEMON BACKED", -1)
         tw, _ = layout.get_pixel_size()
         cr.set_source_rgba(C_TEXT_MUTED[0], C_TEXT_MUTED[1], C_TEXT_MUTED[2], 0.40 * p)
-        cr.move_to(w / 2 - tw / 2, h - 22)
+        cr.move_to(clock_cx - tw / 2, h - 22)
         PangoCairo.show_layout(cr, layout)
 
     def _draw_step_btn(self, cr, layout, label, delta, x, y, w, h, p):
@@ -791,10 +938,13 @@ class CyberWingWindow(Gtk.Window):
         frac = min(1.0, max(0.0, remaining / total))
         is_imminent = (remaining <= 60.0)
 
+        cx = getattr(self, "content_x", 24.0)
+        cw = getattr(self, "content_w", w - 48.0)
+
         # Circular Reactor Gauge
-        rcx, rcy = w / 2, 220
-        rr = 82.0
-        ring_w = 8.0
+        rcx, rcy = cx + cw / 2, 220
+        rr = 70.0 * getattr(self, "ui_scale", 1.0)
+        ring_w = 7.0
 
         cr.new_path()
         cr.set_line_width(ring_w)
@@ -852,19 +1002,18 @@ class CyberWingWindow(Gtk.Window):
         layout.set_text(status_line, -1)
         itw, _ = layout.get_pixel_size()
         cr.set_source_rgba(C_TEXT_WHITE[0], C_TEXT_WHITE[1], C_TEXT_WHITE[2], 0.80 * p)
-        cr.move_to(w / 2 - itw / 2, 335)
+        cr.move_to(rcx - itw / 2, 335)
         PangoCairo.show_layout(cr, layout)
 
         # Dual Buttons: [ RETRACT TO BACKGROUND ] & [ ABORT TIMER ]
         btn_y = 380
-        btn_w = 190
+        gap = 12
+        avail_w = cw
+        btn_w = (avail_w - gap) / 2
         btn_h = 44
-        gap = 14
-        total_w = btn_w * 2 + gap
-        start_x = (w - total_w) / 2
 
         # 1. RETRACT WING Button
-        bg_x = start_x
+        bg_x = cx
         self._bg_hitbox = (bg_x, btn_y, btn_w, btn_h)
 
         cr.new_path()
@@ -890,7 +1039,7 @@ class CyberWingWindow(Gtk.Window):
         PangoCairo.show_layout(cr, layout)
 
         # 2. ABORT TIMER Button
-        abort_x = start_x + btn_w + gap
+        abort_x = cx + btn_w + gap
         self._cancel_hitbox = (abort_x, btn_y, btn_w, btn_h)
 
         cr.new_path()
@@ -916,11 +1065,13 @@ class CyberWingWindow(Gtk.Window):
         PangoCairo.show_layout(cr, layout)
 
     def _draw_placeholder_content(self, cr, layout, w, h, p):
+        cx = getattr(self, "content_x", 24.0)
+        cw = getattr(self, "content_w", w - 48.0)
         layout.set_font_description(Pango.FontDescription("JetBrains Mono Bold 12"))
         layout.set_text(f"{self.active_app.upper()} MODULE LOADED", -1)
         tw, th = layout.get_pixel_size()
         cr.set_source_rgba(C_CYAN[0], C_CYAN[1], C_CYAN[2], 0.85 * p)
-        cr.move_to(w / 2 - tw / 2, 200)
+        cr.move_to(cx + (cw - tw) / 2, 200)
         PangoCairo.show_layout(cr, layout)
 
     # ==========================================================================
