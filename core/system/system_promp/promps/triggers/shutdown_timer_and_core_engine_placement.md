@@ -13,5 +13,8 @@ Triggered when configuring, debugging, or extending the Sovereign Shutdown Timer
   - When countdown reaches zero, the action (`systemctl reboot`, `systemctl poweroff`, or `systemctl suspend`) MUST execute immediately with `sudo -n` fallback.
   - Closing or minimizing the GTK GUI must NEVER abort the scheduled power action unless the user explicitly clicks "ABORT TIMER" or passes `--abort`.
   - Re-opening the GUI while a countdown is active must seamlessly resume the live reactor ring display.
-- **Pure Optical Crystal Glass Standard:**
-  - Enforce 28px blur, cosmic obsidian void (`#090d16`), convex specular highlight pills, and recessed concave wells (`rgba(2, 6, 12, 0.85)`) for digital readouts.
+- **Orbital Cyber Wings Architecture & Safe Clearance Invariant:**
+  - Radial sectors open into dockable Sci-Fi Cyber Wings flanking the central reactor: Left Wing for left sectors (e.g. Timer, System), Right Wing for right sectors (e.g. Code, Web, Media). Tarot Oracle remains an independent 3D visual theater.
+  - **Single-Slot Invariant (Rule of 1):** Each wing (left and right) hosts at most ONE active application at a time. Activating another sector mapped to the same side instantly swaps the content in that wing.
+  - **Strict Vertical Corridor Clearance:** Wing height and positioning must strictly honor the safe vertical corridor between `y=245` and `y=815` (height ~570px) to guarantee zero occlusion over the top Forex Calendar (`y<240`) and bottom Crypto Ticker (`y>825`).
+  - Chevron notch on the wing's inner edge must frame the equator of the orbital reactor nodes at screen `y=540`.

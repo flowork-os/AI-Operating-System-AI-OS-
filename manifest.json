@@ -1,15 +1,15 @@
 {
   "format_version": "1.1",
-  "generated_at": "2026-11-28T14:39:53Z",
+  "generated_at": "2026-11-28T14:58:40Z",
   "version": "1.0.0",
-  "manifest_id": "1d2713fd2c2cd54c4ba899320a4d24670a7947687d7884202b9847f752eefdb6",
-  "commit": "d5f6359f271800efb4e2713ad5bb8a396c629afa",
+  "manifest_id": "665f37a17cf12c7261e1aee5f6a9964e5880d715cdc533514afed781c886eee0",
+  "commit": "735bd35e132e579f3966d9846089ef761862a4ff",
   "branch": "main",
   "repository": "https://github.com/flowork-os/AI-Operating-System-AI-OS-.git",
   "raw_base_url": "https://raw.githubusercontent.com/flowork-os/AI-Operating-System-AI-OS-/main",
-  "total_files": 23901,
-  "total_symlinks": 206,
-  "total_bytes": 789299049,
+  "total_files": 23903,
+  "total_symlinks": 207,
+  "total_bytes": 789345913,
   "files": {
     "core/ARCHITECT.md": {
       "sha256": "f4807c67526e378d33e3d99169c1873d9013770102c4b9da28d89cfb9ff1fe68",
@@ -125922,7 +125922,7 @@
       "target": "/opt/floworkos/system/environment"
     },
     "core/system/version.json": {
-      "sha256": "ce5286ce1fd48840690e357291a050865ecc06f49f84ab1a9831fcdc2ddc8f8a",
+      "sha256": "76902b6ca7396d51996806bf06db84d9a3a642f992adb70fda97c6fa715c2211",
       "size": 452,
       "mode": "664",
       "target": "/opt/floworkos/system/version.json"
@@ -129156,8 +129156,8 @@
       "target": "/opt/floworkos/system/system_promp/promps/triggers/suno_audio_pipeline.md"
     },
     "core/system/system_promp/promps/triggers/shutdown_timer_and_core_engine_placement.md": {
-      "sha256": "36df784ff5ef5f5956915466ebf57cab2ea450f64d08e27312423445a788fbb2",
-      "size": 1754,
+      "sha256": "4742de4fc00f50ef65474c3c45e082146b080a8dc9ae2570e01cdadca5e0cba2",
+      "size": 2448,
       "mode": "644",
       "target": "/opt/floworkos/system/system_promp/promps/triggers/shutdown_timer_and_core_engine_placement.md"
     },
@@ -129815,6 +129815,12 @@
       "mode": "755",
       "target": "/opt/floworkos/bin/flowork-edits-daemon"
     },
+    "core/bin/flowork-wing": {
+      "sha256": "fb61b922ba19ba6b7cac1b7343a2ef5c8cdf30a6a183b6c3779d1bdea06abb05",
+      "size": 99,
+      "mode": "775",
+      "target": "/opt/floworkos/bin/flowork-wing"
+    },
     "core/bin/flowfs-rollback": {
       "sha256": "345e2a2370446430247c93cd02eef16723d792714d8ccdfdcaf2b8b5516ae2ba",
       "size": 2831184,
@@ -130008,8 +130014,8 @@
       "target": "/opt/floworkos/bin/flowork-bus"
     },
     "core/bin/flowork-shutdown-timer": {
-      "sha256": "7544d572667fb7ed8ea6e99d2e610df62c33e8cbe723fb67d770db50fb2cd628",
-      "size": 102,
+      "sha256": "ed2b99f7a7709215d92923aff7efce4f0634b85adf81f9a0e4e507e378cdcc3e",
+      "size": 234,
       "mode": "775",
       "target": "/opt/floworkos/bin/flowork-shutdown-timer"
     },
@@ -139907,6 +139913,12 @@
       "mode": "755",
       "target": "/opt/floworkos/engine/orbital_reactor/reactor_hud.py"
     },
+    "core/engine/orbital_reactor/cyber_wing.py": {
+      "sha256": "108a036abe526cd1476640d6ac5f0d0c7a6e197cabc683abe9a01f0d5ddf2926",
+      "size": 45939,
+      "mode": "755",
+      "target": "/opt/floworkos/engine/orbital_reactor/cyber_wing.py"
+    },
     "core/engine/vocal_master/vocal_focus.py": {
       "sha256": "ade3ae9a89369a69441261caf1b09a12b4919bf6b492b70b0c06c974bfa1bcc2",
       "size": 13340,
@@ -144038,6 +144050,10 @@
     "system/bin/flowork-edits-daemon": {
       "link_target": "/opt/floworkos/bin/flowork-edits-daemon",
       "target": "/usr/local/bin/flowork-edits-daemon"
+    },
+    "system/bin/flowork-wing": {
+      "link_target": "/opt/floworkos/bin/flowork-wing",
+      "target": "/usr/local/bin/flowork-wing"
     },
     "system/bin/flowfs-rollback": {
       "link_target": "/opt/floworkos/bin/flowfs-rollback",

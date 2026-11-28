@@ -1,2 +1,6 @@
 #!/usr/bin/env bash
-exec /usr/bin/python3 /opt/floworkos/engine/shutdown_timer/shutdown_timer.py "$@"
+if [ "$#" -gt 0 ]; then
+    exec /usr/bin/python3 /opt/floworkos/engine/shutdown_timer/shutdown_timer.py "$@"
+else
+    exec /usr/bin/python3 /opt/floworkos/engine/orbital_reactor/cyber_wing.py toggle left timer
+fi
